@@ -1,8 +1,18 @@
 import tensorflow as tf
 from tensorflow.keras import layers
-from tensorflow.nn import depthwise_conv2d, conv2d, bias_add
+from tensorflow.nn import depthwise_conv2d, conv2d, bias_add, relu6
 from tensorflow.keras.initializers import GlorotNormal
 from tensorflow.keras.regularizers import l2
+
+#
+# Layer que realiza activacion ReLU6
+#
+class ReLU6(layers.Layer):
+    def __init__(self, name="ReLU6", **kwargs):
+        super(ReLU6, self).__init__(name=name, **kwargs)
+
+    def call(self, inputs):
+        return relu6(inputs)
 
 #
 # Layer que realiza una convulucion estandar
@@ -34,6 +44,11 @@ class normal_conv(layers.Layer):
                  **kwargs):
 
         super(normal_conv, self).__init__(name=name, **kwargs)
+
+        # Asegura de que el num_filters sea un entero
+        if type(num_filters) is float:
+            num_filters = int(num_filters)
+
         self.f_kernel = f_kernel
         self.num_filters = num_filters
         self.strides = strides
@@ -108,12 +123,14 @@ class depthwise_conv(layers.Layer):
                  weight_decay=1e-4,
                  **kwargs):
         super(depthwise_conv, self).__init__(name=name, **kwargs)
+        
         self.f_kernel = f_kernel
         self.channel_multiplier = channel_multiplier
         self.strides = strides
         self.padding = padding
         self.use_bias = use_bias
         self.weight_decay = weight_decay
+
         if initializer == None:
             self.w_initializer = GlorotNormal()
         else:
@@ -182,6 +199,11 @@ class pointwise_conv(layers.Layer):
                  weight_decay=1e-4,
                  **kwargs):
         super(pointwise_conv, self).__init__(name=name, **kwargs)
+
+        # Asegura de que el num_filters sea un entero
+        if type(num_filters) is float:
+            num_filters = int(num_filters)
+
         self.f_kernel = (1, 1)
         self.num_filters = num_filters
         self.strides = strides
