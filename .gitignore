@@ -1,2 +1,5 @@
+# Igonarar todos los .DS_Store
+*.DS_Store
 
-.DS_Store
+# Ignorar la carpet datasets
+datasets/

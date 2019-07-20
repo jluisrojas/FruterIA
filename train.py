@@ -3,6 +3,7 @@ import matplotlib
 matplotlib.use("Agg")
 
 # import the neccesary packages
+import tensorflow as tf
 from mobilenetv1 import MobileNetV1
 from mobilenetv2 import MobileNetV2
 from sklearn.preprocessing import LabelBinarizer
@@ -85,7 +86,8 @@ H = model.fit_generator(aug.flow(trainX, trainY, batch_size=32),
 	validation_data=(testX, testY), steps_per_epoch=len(trainX) // 32,
 	epochs=epochs)
 
-print(H.history)
+print(model.summary())
+#tf.keras.utils.plot_model(model, 'model_arch.png', show_shapes=True)
 
 # evaluate the network
 print("[INFO] evaluating network...")

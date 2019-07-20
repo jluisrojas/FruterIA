@@ -64,6 +64,21 @@ class normal_conv(layers.Layer):
             self.w_regularizer = l2(weight_decay)
         else:
             selw.w_regularizer = regularizer
+
+    #
+    # Serializa las propiedades de la capa
+    def get_config(self):
+        config = super(normal_conv, self).get_config()
+        config.update({
+            "num_filters": self.num_filters,
+            "f_kernel": self.f_kernel,
+            "strides": self.strides,
+            "padding": self.padding,
+            "use_bias": self.use_bias
+        })
+
+        return config
+
     #
     # Crea weights y biases dependiendo del input_shape de call()
     #
@@ -123,7 +138,7 @@ class depthwise_conv(layers.Layer):
                  weight_decay=1e-4,
                  **kwargs):
         super(depthwise_conv, self).__init__(name=name, **kwargs)
-        
+
         self.f_kernel = f_kernel
         self.channel_multiplier = channel_multiplier
         self.strides = strides
@@ -139,6 +154,19 @@ class depthwise_conv(layers.Layer):
             self.w_regularizer = l2(weight_decay)
         else:
             self.w_regularizer = regularizer
+    #
+    # Serializa las propiedades de la capa
+    def get_config(self):
+        config = super(depthwise_conv, self).get_config()
+        config.update({
+            "f_kernel": self.f_kernel,
+            "channel_multiplier": self.channel_multiplier,
+            "strides": self.strides,
+            "padding": self.padding,
+            "use_bias": self.use_bias,
+            "weight_decay": self.weight_decay
+        })
+
     #
     # Crea weights y biases dependiendo del input_shape de call()
     #
@@ -218,6 +246,18 @@ class pointwise_conv(layers.Layer):
             self.w_regularizer = l2(weight_decay)
         else:
             self.w_regularizer = regularizer
+
+    #
+    # Serializa las propiedades de la capa
+    def get_config(self):
+        config = super(pointwise_conv, self).get_config()
+        config.update({
+            "num_filters": self.num_filters,
+            "strides": self.strides,
+            "padding": self.padding,
+            "use_bias": self.use_bias,
+            "weight_deacay": self.weight_decay
+        })
 
     def build(self, input_shape):
         in_channels = input_shape[-1]

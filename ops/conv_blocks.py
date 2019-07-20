@@ -23,6 +23,8 @@ class D1x1Block(layers.Layer):
     #
     def __init__(self, filters, stride, name="D1x1Block", **kwargs):
         super(D1x1Block, self).__init__(name=name, **kwargs)
+        self.filters = filters
+        self.stride = stride
 
         # Asegura de que el filters sea un entero
         if type(filters) is float:
@@ -37,6 +39,15 @@ class D1x1Block(layers.Layer):
         self.pwise = ops.pointwise_conv(filters)
         self.pwbn = layers.BatchNormalization()
         self.pwrelu = layers.Activation("relu")
+
+    #
+    # serializa la configuracion de la capa
+    def get_config(self):
+        config = super(D1x1Block, self).get_config()
+        config.update({
+            "filters": self.filters,
+            "stride": self.stride
+        })
 
     def call(self, inputs):
         # Operacion depth wise
@@ -86,21 +97,34 @@ class BottleneckResidualBlock(layers.Layer):
         self.input_channels = input_channels
         self.output_channels = filters
         self.stride = stride
+        self.t = t
         self.dropout = dropout
 
-        self.pw_exp = ops.pointwise_conv(input_channels * t)
-        self.bn_exp = layers.BatchNormalization()
+        self.pw_exp = ops.pointwise_conv(input_channels * t, name=name + "_expansion_conv")
+        self.bn_exp = layers.BatchNormalization(name=name+"_expansion_bn")
 
-        self.dwise =  ops.depthwise_conv((3,3), strides=[1, stride, stride, 1])
-        self.bn_dwise = layers.BatchNormalization()
+        self.dwise =  ops.depthwise_conv((3,3), strides=[1, stride, stride, 1], name=name+"_depthwise_conv")
+        self.bn_dwise = layers.BatchNormalization(name=name+"_depthwise_bn")
 
-        self.pw_bottleneck = ops.pointwise_conv(self.output_channels)
-        self.bn_bottleneck = layers.BatchNormalization()
+        self.pw_bottleneck = ops.pointwise_conv(self.output_channels, name=name+"_bottleneck_conv")
+        self.bn_bottleneck = layers.BatchNormalization(name=name+"_bottleneck_bn")
 
         # En caso de que el input y output no concuerden,
         # se realiza un 1x1 conv para que concuerdes
         # if self.input_channels != self.output_channels:
         #     self.pw_residual = ops.pointwise_conv(self.output_channels)
+
+    #
+    # serializa la configuracion de la capa
+    def get_config(self):
+        config = super(BottleneckResidualBlock, self).get_config()
+        config.update({
+            "input_channels": self.input_channels,
+            "filters": self.output_channels,
+            "stride": self.stridem
+            "t": self.t,
+            "dropout": self.dropout
+        })
 
     def call(self, inputs, training=None):
         residual = inputs
