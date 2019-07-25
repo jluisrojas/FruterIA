@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.keras import layers
+
 from tensorflow.nn import depthwise_conv2d, conv2d, bias_add, relu6
 from tensorflow.keras.initializers import GlorotNormal
 from tensorflow.keras.regularizers import l2

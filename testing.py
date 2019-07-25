@@ -1,7 +1,9 @@
 import tensorflow as tf
-from tensorflow.keras import layers
-from ops.conv_ops import normal_conv, depthwise_conv, pointwise_conv
+import numpy as np
+# from tensorflow.keras import layers
+# from ops.conv_ops import normal_conv, depthwise_conv, pointwise_conv
 
+"""
 class Linear(layers.Layer):
     def __init__(self, units=32, **kwargs):
         super(Linear, self).__init__(**kwargs)
@@ -32,3 +34,42 @@ conv = pointwise_conv(20)
 x = tf.ones((1, 3, 3, 3))
 res = conv(x)
 print(res)
+"""
+
+
+x = np.array([[1, 2, 3, 4],
+              [1, 2, 3, 4]])
+
+y = np.zeros((4, 4, 3 * 4))
+
+z = np.array([[[1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4],
+               [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4],
+               [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4],
+               [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4]],
+
+              [[1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4],
+               [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4],
+               [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4],
+               [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4]], 
+              
+              [[1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4],
+               [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4],
+               [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4],
+               [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4]],
+
+              [[1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4],
+               [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4],
+               [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4],
+               [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4]]])
+print(z.shape)
+
+tensor = tf.convert_to_tensor(z)
+
+print(tensor)
+
+reshaped_tensor = tf.reshape(tensor, [4, 4, 3, 4])
+
+print(reshaped_tensor)
+
+
+
