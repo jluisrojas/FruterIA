@@ -83,6 +83,11 @@ class MobileNetV2(Model):
 
         return x
 
+
+# Implementacion de SSD framework para object detection con arquitectura
+# de MobileNetV2, SSD esta configurado de la siguiente manera segun paper:
+#   - first SSD layer: expansion de layer 15 stride=16
+#   - second and rest SSD layer: ultima layer stride=32 
 class MobileNetV2_SSD():
     def __init__(self, classes, width_multiplier=1):
         super(MobileNetV2_SSD, self).__init__()

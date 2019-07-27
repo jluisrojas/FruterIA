@@ -67,7 +67,7 @@ tensor = tf.convert_to_tensor(z)
 
 print(tensor)
 
-reshaped_tensor = tf.reshape(tensor, [4, 4, 3, 4])
+reshaped_tensor = tf.reshape(tensor, [16, 3, 4])
 
 print(reshaped_tensor)
 

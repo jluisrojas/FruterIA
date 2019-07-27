@@ -84,7 +84,14 @@ class BottleneckResidualBlock(layers.Layer):
     #   dropout: cantidad de dropout que se realizara
     #   name: nombre del bloque
     #
-    def __init__(self, input_channels, filters, stride=1, t=6, dropout=0.25, name="BottleneckResidualBlock", **kwargs):
+    def __init__(self, 
+                 input_channels, 
+                 filters, 
+                 stride=1, 
+                 t=6, 
+                 dropout=0.25, 
+                 store_output=False,
+                 name="BottleneckResidualBlock", **kwargs):
         super(BottleneckResidualBlock, self).__init__(name=name, **kwargs)
 
         # Asegura de que el input_channels sea un entero
@@ -99,6 +106,10 @@ class BottleneckResidualBlock(layers.Layer):
         self.stride = stride
         self.t = t
         self.dropout = dropout
+        self.store_output = store_output
+
+        self.expansion_output = None
+        self.block_output = None
 
         self.pw_exp = ops.pointwise_conv(input_channels * t, name=name + "_expansion_conv")
         self.bn_exp = layers.BatchNormalization(name=name+"_expansion_bn")
@@ -123,7 +134,8 @@ class BottleneckResidualBlock(layers.Layer):
             "filters": self.output_channels,
             "stride": self.stridem
             "t": self.t,
-            "dropout": self.dropout
+            "dropout": self.dropout,
+            "store_output": self.store_output
         })
 
     def call(self, inputs, training=None):
@@ -133,6 +145,8 @@ class BottleneckResidualBlock(layers.Layer):
         x = self.pw_exp(inputs)
         x = self.bn_exp(x)
         x = relu6(x)
+        if self.store_output == True:
+            self.expansion_output = x
         if training == True:
             x = layers.Dropout(self.dropout)
 
