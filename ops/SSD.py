@@ -240,3 +240,14 @@ def intersection_over_union(t_boxA, t_boxB):
     iou = interArea / float(boxAArea + boxBArea - interArea)
 
     return iou
+
+
+# Pipeline encargada de procesar un batch de training set, para
+# realizar la estrategia de matching para crear la informacion de
+# ground truth
+class SSD_data_pipeline(object):
+    def __init__(self, aspect_ratios, num_feature_maps):
+        self.aspect_ratios = aspect_ratios
+        self.num_feature_maps = num_feature_maps
+        
+        self.num_priors = compute_num_priors(aspect_ratios)
