@@ -246,8 +246,30 @@ def intersection_over_union(t_boxA, t_boxB):
 # realizar la estrategia de matching para crear la informacion de
 # ground truth
 class SSD_data_pipeline(object):
-    def __init__(self, aspect_ratios, num_feature_maps):
+    # Metodos del objeto
+    #   init: iniicalizacion con los parametros de la arquitectura
+    #   process: procesa un batch de imagenes
+
+    # Inicializacion de los parametros acerca de la arquitectura de la red
+    # Argumentos:
+    #   aspect_ratios: arreglo conteniendo los aspect ratios segun el paper
+    #   num_feature_maps: el numero de feature maps (m tal que mxm)
+    #   num_categories: el numero de categorias a clasificar
+    #   img_size: entero que contiene el numero de pixeles de un lado de la img
+    def __init__(self, 
+                 aspect_ratios=None, 
+                 num_feature_maps=None, 
+                 num_categories=None,
+                 img_size=None):
         self.aspect_ratios = aspect_ratios
         self.num_feature_maps = num_feature_maps
+        self.num_categories = num_categories
+        self.img_size = img_size
         
         self.num_priors = compute_num_priors(aspect_ratios)
+
+    # Procesa un batch de imagenes para convertirlos a training data
+    # Argumentos:
+    #   image_batch: tensor de shape [batch_size, size, size, r, g, b]
+    #   y_true: tensor de shape [batch_size, categorias + 4]
+    def process(self, image_batch, y_true):
