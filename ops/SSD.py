@@ -1,10 +1,17 @@
 import math
+import cv2
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import layers
 from tensorflow.keras.initializers import GlorotNormal
 from tensorflow.keras.regularizers import l2
 from ops.conv_ops import normal_conv
+# Regresar un directoria para poder acceder modulo de otra carpeta
+import sys
+sys.path.append("..")
+from utils import tfrecord_coco
+sys.path.append("ops/")
+
 
 # Idea general de la layer
 #   - recibe input de un feature map
@@ -265,11 +272,26 @@ class SSD_data_pipeline(object):
         self.num_feature_maps = num_feature_maps
         self.num_categories = num_categories
         self.img_size = img_size
-        
-        self.num_priors = compute_num_priors(aspect_ratios)
+        if aspect_ratios:
+            self.num_priors = compute_num_priors(aspect_ratios)
 
     # Procesa un batch de imagenes para convertirlos a training data
     # Argumentos:
     #   image_batch: tensor de shape [batch_size, size, size, r, g, b]
     #   y_true: tensor de shape [batch_size, categorias + 4]
     def process(self, image_batch, y_true):
+        pass
+
+    def preprocess_tfrecord_coco(self, path_to_tfrecord):
+        dataset_tfrecord_coco = tfrecord_coco.parse_dataset(path_to_tfrecord)
+        
+        it = iter(dataset_tfrecord_coco)
+
+        img_data = next(it)
+
+        # Decodificacion de imagen
+        image_string = np.frombuffer(img_data["img/str"].numpy(), np.uint8)
+        decoded_image = cv2.imdecode(image_string, cv2.IMREAD_COLOR)
+        image_tensor = tf.convert_to_tensor(decoded_image)
+        print(image_tensor)
+        

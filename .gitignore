@@ -1,5 +1,6 @@
 # Igonarar todos los .DS_Store
 *.DS_Store
+*.swp
 
 # Ignorar la carpet datasets
 datasets/

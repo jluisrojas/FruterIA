@@ -21,19 +21,27 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("-f", "--folder", required=True, 
                     help="path to dataset folder")
+    ap.add_argument("-r", "--result", required=True,
+                    help="path were the TFRecord will be saved")
     args = vars(ap.parse_args())
     path = args["folder"]
+    res = args["result"]
 
-    coco_tfrecord(path)
+    coco_tfrecord(path, res)
 
-def coco_tfrecord(path):
+def coco_tfrecord(path, res):
+    print("[INFO] Loading images paths")
     img_dirs = glob.glob(path + "/*.jpg")
     anns_dirs = glob.glob(path +  "/*.json")
     num_imgs = len(img_dirs)
 
     if num_imgs > 0:
-        for i in range(3):
-            _image_example(img_path=img_dirs[i], ann_path=anns_dirs[i]) 
+        print("[INFO] Serializing dataset")
+        with tf.io.TFRecordWriter(res) as f:
+            for i in range(num_imgs):
+                print("Copied {} of {}".format(i+1, num_imgs))
+                example = _image_example(img_path=img_dirs[i], ann_path=anns_dirs[i]) 
+                f.write(example.SerializeToString())
 
     return None
 
@@ -44,15 +52,31 @@ def _image_example(img_path=None, ann_path=None):
     with open(ann_path) as json_text:
         ann = json.loads(json_text.read())
 
+    cat_s = []
+    x_s = []
+    y_s = []
+    w_s = []
+    h_s = []
+    for bbox in ann["bboxes"]:
+        cat_s.append(str.encode(bbox["category_id"]))
+        x_s.append(bbox["center_x"])
+        y_s.append(bbox["center_y"])
+        w_s.append(bbox["width"])
+        h_s.append(bbox["height"])
+
     data = {
-        "img/filename": bytes_feature([str.encode(ann["filename"])]),
-        "img/width": int64_feature([ann["width"]]),
-        "img/height": int64_feature([ann["height"]]),
-        #"img/str": bytes_feature([image_str]),
-        "img/bboxes/category": bytes_feature([str.encode(bbox["category_id"]) for bbox
-            in ann["bboxes"]])
+        "img/filename": bytes_feature(str.encode(ann["filename"])),
+        "img/width": int64_feature(ann["width"]),
+        "img/height": int64_feature(ann["height"]),
+        "img/str": bytes_feature(image_str),
+        "img/bboxes/category": bytes_list_feature(cat_s),
+        "img/bboxes/x": float_list_feature(x_s),
+        "img/bboxes/y": float_list_feature(y_s),
+        "img/bboxes/width": float_list_feature(w_s),
+        "img/bboxes/height": float_list_feature(h_s)
+
     }
-    print(data)
+
     return tf.train.Example(features=tf.train.Features(feature=data))
 
 
