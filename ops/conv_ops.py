@@ -102,7 +102,7 @@ class normal_conv(layers.Layer):
     # Args:
     #   inputs: tensor de shape (batch, heigh, width, channels)
     #
-    def call(self, inputs):
+    def call(self, inputs, training=None):
         conv = conv2d(inputs, self.w, self.strides, self.padding)
         if self.use_bias:
             return bias_add(conv, self.b)
@@ -193,7 +193,7 @@ class depthwise_conv(layers.Layer):
     # Args:
     #   inputs: tensor de shape (batch, heigh, width, channels)
     #
-    def call(self, inputs):
+    def call(self, inputs, training=None):
         conv = depthwise_conv2d(inputs, self.w, self.strides, self.padding)
         if self.use_bias:
             return bias_add(conv, self.b)
@@ -277,7 +277,7 @@ class pointwise_conv(layers.Layer):
                                      name=self.name+"_b")
 
 
-    def call(self, inputs):
+    def call(self, inputs, training=None):
         conv = conv2d(inputs, self.w, self.strides, self.padding)
         if self.use_bias:
             return bias_add(conv, self.b)

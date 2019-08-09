@@ -134,6 +134,7 @@ def compute_num_priors(aspect_ratios):
 #   img_size: tamaño de la imagen original
 # Returns:
 #   Tensor with boxes loc of shape (features, features, priors, 4(x, y, w, h))
+@tf.function
 def PriorsBoxes(batch_size=None,
                 features=None,
                 num_fmap=None,
@@ -213,11 +214,26 @@ def PriorsBoxes(batch_size=None,
 #   loc: tensorf of shape [4]
 # Returns:
 #   x, y, w, h: posicion y tamaño como enteros
+@tf.function
 def bbox_center_to_rect(loc):
     w = loc[2]
     h = loc[3]
     x = loc[0] - (w/2)
     y = loc[1] - (h/2)
+
+    return int(x), int(y), int(w), int(h)
+#
+# Converte cordenadas (x, y, w, h) a (cx, cy, w, h)
+# Args:
+#   loc: tensor of shape [4]
+# Returns:
+#   cx, cy, w, h: posicion y tamaño como enteros
+@tf.function
+def bbox_rect_to_center(loc):
+    w = loc[2]
+    h = loc[3]
+    cx = loc[0] + (w/2)
+    cy = loc[1] + (h/2)
 
     return int(x), int(y), int(w), int(h)
 
@@ -229,6 +245,7 @@ def bbox_center_to_rect(loc):
 #   t_boxB: tensor of shape [4] de (x, y, w, h)
 # Returns:
 #   iou = float de 0.0 a 1.0
+@tf.function
 def intersection_over_union(t_boxA, t_boxB):
     # Se convierte los tensores  a numpy arrays
     boxA = np.array(t_boxA)
@@ -260,20 +277,24 @@ class SSD_data_pipeline(object):
     # Inicializacion de los parametros acerca de la arquitectura de la red
     # Argumentos:
     #   aspect_ratios: arreglo conteniendo los aspect ratios segun el paper
-    #   num_feature_maps: el numero de feature maps (m tal que mxm)
-    #   num_categories: el numero de categorias a clasificar
+    #   feature_maps: arreglo conteniendo pares con los tamaños de los f maps
+    #   categories_arr: arreglo de strings con los nombre de las categorias
     #   img_size: entero que contiene el numero de pixeles de un lado de la img
     def __init__(self, 
-                 aspect_ratios=None, 
-                 num_feature_maps=None, 
-                 num_categories=None,
+                 aspect_ratios=[1, 2, 3, 1/2, 1/3], 
+                 feature_maps=None, 
+                 categories_arr=None,
                  img_size=None):
         self.aspect_ratios = aspect_ratios
-        self.num_feature_maps = num_feature_maps
-        self.num_categories = num_categories
+        self.feature_maps = feature_maps
+        self.categories_arr = categories_arr
         self.img_size = img_size
-        if aspect_ratios:
-            self.num_priors = compute_num_priors(aspect_ratios)
+        self.num_priors = compute_num_priors(aspect_ratios)
+
+        self.categories_index = {}
+        # Creacion de indices de las categorias
+        for i in range(len(self.categories_arr)):
+            self.categories_index[self.categories_arr[i]] = i
 
     # Procesa un batch de imagenes para convertirlos a training data
     # Argumentos:
@@ -293,5 +314,7 @@ class SSD_data_pipeline(object):
         image_string = np.frombuffer(img_data["img/str"].numpy(), np.uint8)
         decoded_image = cv2.imdecode(image_string, cv2.IMREAD_COLOR)
         image_tensor = tf.convert_to_tensor(decoded_image)
-        print(image_tensor)
+
+        for f_map in feature_maps:
+            pass
         
