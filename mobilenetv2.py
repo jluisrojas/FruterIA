@@ -5,6 +5,7 @@ from ops.conv_ops import normal_conv, ReLU6, pointwise_conv
 from ops.conv_blocks import BottleneckResidualBlock, basic_conv_block
 from ops.conv_blocks import pwise_conv_block, separable_conv_block
 from ops.model_layers import LayerList
+from ops.SSD import SSD_layer
 
 #
 # Implementacion de MobilenetV2, suponiendo un input size de 224x224x3
@@ -97,6 +98,7 @@ class MobileNetV2_SSD(Model):
         super(MobileNetV2_SSD, self).__init__()
         #self.classes = classes
         a = width_multiplier
+        self.classes = classes
         self.m_layers = LayerList()
         self.saved_block = 13 # output que guarda para ssd_lite
 
@@ -118,7 +120,7 @@ class MobileNetV2_SSD(Model):
         l_num = len(self.m_layers)
         l = pwise_conv_block(int(a*1280), dropout=0.25, activation="ReLU6",
                 name="layer_{}_conv1x1".format(l_num))
-        self.m_layers.add(l)
+        self.m_layers.add(l, save_as="last_layer")
 
         # SSD extra feature layers
         l = separable_conv_block(512, 2, name="ssd_feature_layer_1")
@@ -131,6 +133,26 @@ class MobileNetV2_SSD(Model):
         self.m_layers.add(l, save_as=l.name)
 
         # SSD classifier
+        l = SSD_layer(classes=self.classes, num_fmap=1, total_fmaps=5,
+                img_size=320, name="ssd_layer_1")
+        self.m_layers.add(l, save_as=l.name, custom_input="layer_13",
+                custom_input_index=0)
+
+        l = SSD_layer(classes=self.classes, num_fmap=2, total_fmaps=5,
+                img_size=320, name="ssd_layer_2")
+        self.m_layers.add(l, save_as=l.name, custom_input="last_layer")
+
+        l = SSD_layer(classes=self.classes, num_fmap=3, total_fmaps=5,
+                img_size=320, name="ssd_layer_3")
+        self.m_layers.add(l, save_as=l.name, custom_input="ssd_feature_layer_1")
+
+        l = SSD_layer(classes=self.classes, num_fmap=4, total_fmaps=5,
+                img_size=320, name="ssd_layer_4")
+        self.m_layers.add(l, save_as=l.name, custom_input="ssd_feature_layer_2")
+
+        l = SSD_layer(classes=self.classes, num_fmap=5, total_fmaps=5,
+                img_size=320, name="ssd_layer_5")
+        self.m_layers.add(l, save_as=l.name, custom_input="ssd_feature_layer_4")
 
     # Crea BottleneckResidualBlock n veces
     def crearBloques(self, input_channels, t, c, n, s):
@@ -153,5 +175,14 @@ class MobileNetV2_SSD(Model):
     def call(self, inputs, training=False):
         x = self.m_layers.feed_forward(inputs, training)
         return x
+
+    @staticmethod
+    def get_fmaps_array():
+        return [(20, 20), (10, 10), (5, 5), (3, 3), (1, 1)]
+
+    @staticmethod
+    def get_input_size():
+        return 320
+
 
 

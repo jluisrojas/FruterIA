@@ -50,6 +50,8 @@ class basic_conv_block(layers.Layer):
             "activation": self.activation
         })
 
+        return config
+
     def call(self, inputs, training=None):
         # Operacion depth wise
         x = self.conv(inputs)
@@ -102,6 +104,8 @@ class pwise_conv_block(layers.Layer):
             "dropout": self.dropout,
             "activation": self.activation
         })
+
+        return config
 
     def call(self, inputs, training=None):
         # Operacion depth wise
@@ -166,6 +170,8 @@ class separable_conv_block(layers.Layer):
             "stride": self.stride,
             "dropout": self.dropout
         })
+
+        return config
 
     def call(self, inputs, training=None):
         # Operacion depth wise
@@ -262,6 +268,8 @@ class BottleneckResidualBlock(layers.Layer):
             "dropout": self.dropout,
             "store_output": self.store_output
         })
+
+        return config
 
     def call(self, inputs, training=None):
         residual = inputs

@@ -44,13 +44,28 @@ class LayerRef():
                 self.outputs = x
 
             return x[self.output_index]
-
+#
+# Estructura de dato que nos permite guardar las referencias a las layers
+# de un modelo de una red neuronal, todo la implementacion es siguiendo el
+# API de keras para las layers. Permite las siguientes funcionalidades
+#   - Guardar los outputs de ciertas layers
+#   - Que el input de una layer sea el output de una layer guardada
+#   - Tener acceso a las layers mediante indices y diccionarios
+#   - Feedforward
 class LayerList():
     def __init__(self):
         self.layers_list = []
         self.layers_dict = {}
         self.saved_ref = {}
 
+    # Agrega un layer a la lista
+    # Args:
+    #   layers: keras Layer que realiza la computacion
+    #   only_training: si solo se llama durante entrenamiento
+    #   save_as: string que guarda en un dict el output, None no guarda
+    #   output_index: del output del layer(lista) cual es el indice que se usa
+    #   custom_input: string del nombre del output que se guarda para input
+    #   custom_input_index: del input guarda cual es el indice
     def add(self, layer, 
             only_training=False, 
             save_as=None,
@@ -70,11 +85,13 @@ class LayerList():
         if save_output:
             self.saved_ref[save_as] = l
 
+    # Realiza feed forward en las layers
     def feed_forward(self, inputs, training=None):
         x = inputs
         print(x.get_shape())
 
         for layer in self.layers_list:
+            # Si hay input especial
             if layer.custom_input != None:
                 x = self.saved_ref[layer.custom_input].outputs[layer.custom_input_index]
 
@@ -84,6 +101,7 @@ class LayerList():
 
         return x
 
+    # Regresa cuantas layers tiene la lista
     def __len__(self):
         return len(self.layers_list)
 

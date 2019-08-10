@@ -5,20 +5,45 @@ import tensorflow as tf
 from tensorflow.keras import layers
 from tensorflow.keras.initializers import GlorotNormal
 from tensorflow.keras.regularizers import l2
-from ops.conv_ops import normal_conv
+from ops.conv_ops import normal_conv, depthwise_conv, pointwise_conv, ReLU6
 # Regresar un directoria para poder acceder modulo de otra carpeta
 import sys
 sys.path.append("..")
 from utils import tfrecord_coco
 sys.path.append("ops/")
 
+class ssd_lite_conv(layers.Layer):
+    # Args:
+    #   filters: numero de filtros que se aplica en total
+    #   kernel: tamaño del kernel
+    def __init__(self, filters, kernel=(3, 3), name="ssd_lite_conv", **kwargs):
+        super(ssd_lite_conv, self).__init__(name=name, **kwargs)
+        self.filters = filters
+        self.kernel = kernel
 
-# Idea general de la layer
-#   - recibe input de un feature map
-#   - con el input realiza las convoluciones para obtener los sig:
-#       - confidence
-#       - bbox loc
-#       - prior box ?
+        self.dwise = depthwise_conv(self.kernel, strides=[1, 1, 1, 1],
+                padding="SAME", name=name+"_dwise_conv")
+        self.dwbn = layers.BatchNormalization(name=name+"_dwise_bn")
+        self.dwrelu6 = ReLU6(name=name+"_dwise_relu6")
+
+        self.pwise = pointwise_conv(self.filters)
+
+    def get_config(self):
+        config = super(ssd_lite_conv, self).get_config()
+        config.update({
+            "filters": self.filters,
+            "kernel": self.kernel})
+
+        return config
+
+    def call(self, inputs, training=None):
+        x = self.dwise(inputs)
+        x = self.dwbn(inputs)
+        x = self.dwrelu6(inputs)
+        x = self.pwise(inputs)
+
+        return x
+
 
 class SSD_layer(layers.Layer):
     #
@@ -61,15 +86,21 @@ class SSD_layer(layers.Layer):
 
         # Realiza la prediccion de la seguriada de la clase y del tipo
         # de bounding box
-        self.conv_conf = normal_conv(self.priors*self.classes, (3, 3),
-                                     name=name+"_conv_conf",
-                                     padding="SAME")
+        self.conv_conf = ssd_lite_conv(self.priors*self.classes)
+        """
+        self.conv_conf = normal_conv(self.priors*self.classes, (3, 3), 
+            name=name+"_conv_conf",
+            padding="SAME")
+        """
 
         # Realiza la prediccion del offset de las default box,
         # el numero de filtros es de num_priors * 4(dx,dy,dw,dh)
+        self.conv_loc = ssd_lite_conv(self.priors*4)
+        """
         self.conv_loc = normal_conv(self.priors*4, (3, 3),
-                                     name=name+"_conv_loc",
-                                     padding="SAME")
+                name=name+"_conv_loc",
+                padding="SAME")
+        """
 
     def get_config(self):
         config = super(SSD_layer, self).get_config()
@@ -81,6 +112,8 @@ class SSD_layer(layers.Layer):
             "img_size": self.img_size
         })
 
+        return config
+
     
     # Recive el feature map y calcula lo siguiente:
     #   conf: tensor shape (batch, features, features, priors, classes)
@@ -88,7 +121,7 @@ class SSD_layer(layers.Layer):
     #   priors: tensor shape (features, features, priors, 4(cx, cy, w, h))
     # con eso se puede obtener, una version con todo junto para el loss
     #  shape[batch, features*features, priors, classes+4(dx, dy, dw, dh)+4(cx, cy, w h)]
-    def call(self, inputs):
+    def call(self, inputs, training=None):
         b_size = inputs.get_shape().as_list()[0]
         features = inputs.get_shape().as_list()[1]
 
@@ -104,6 +137,7 @@ class SSD_layer(layers.Layer):
         loc = tf.reshape(loc, [b_size, features*features,
             self.priors, 4])
 
+        bpriors = tf.cast(bpriors, tf.float32)
         prediction = tf.concat([conf, loc, bpriors], -1)
 
         return prediction
@@ -308,13 +342,17 @@ class SSD_data_pipeline(object):
         
         it = iter(dataset_tfrecord_coco)
 
-        img_data = next(it)
+        for _ in range(3):
+            img_data = next(it)
 
-        # Decodificacion de imagen
-        image_string = np.frombuffer(img_data["img/str"].numpy(), np.uint8)
-        decoded_image = cv2.imdecode(image_string, cv2.IMREAD_COLOR)
-        image_tensor = tf.convert_to_tensor(decoded_image)
+            # Decodificacion de imagen
+            image_string = np.frombuffer(img_data["img/str"].numpy(), np.uint8)
+            decoded_image = cv2.imdecode(image_string, cv2.IMREAD_COLOR)
+            image_tensor = tf.convert_to_tensor(decoded_image)
+            
+            print(image_tensor)
 
-        for f_map in feature_maps:
-            pass
+            total_fmaps = len(self.feature_maps)
+            for f_map in self.feature_maps:
+                pass
         
