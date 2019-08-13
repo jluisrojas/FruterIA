@@ -248,7 +248,6 @@ def PriorsBoxes(batch_size=None,
 #   loc: tensorf of shape [4]
 # Returns:
 #   x, y, w, h: posicion y tamaño como enteros
-@tf.function
 def bbox_center_to_rect(loc):
     w = loc[2]
     h = loc[3]
@@ -262,7 +261,6 @@ def bbox_center_to_rect(loc):
 #   loc: tensor of shape [4]
 # Returns:
 #   cx, cy, w, h: posicion y tamaño como enteros
-@tf.function
 def bbox_rect_to_center(loc):
     w = loc[2]
     h = loc[3]
@@ -279,7 +277,6 @@ def bbox_rect_to_center(loc):
 #   t_boxB: tensor of shape [4] de (x, y, w, h)
 # Returns:
 #   iou = float de 0.0 a 1.0
-@tf.function
 def intersection_over_union(t_boxA, t_boxB):
     # Se convierte los tensores  a numpy arrays
     boxA = np.array(t_boxA)
@@ -338,21 +335,85 @@ class SSD_data_pipeline(object):
         pass
 
     def preprocess_tfrecord_coco(self, path_to_tfrecord):
+        
         dataset_tfrecord_coco = tfrecord_coco.parse_dataset(path_to_tfrecord)
         
         it = iter(dataset_tfrecord_coco)
 
-        for _ in range(3):
+        for _ in range(10):
+            print("image:")
             img_data = next(it)
 
             # Decodificacion de imagen
             image_string = np.frombuffer(img_data["img/str"].numpy(), np.uint8)
             decoded_image = cv2.imdecode(image_string, cv2.IMREAD_COLOR)
+            x_, y_ = decoded_image.shape[0], decoded_image.shape[1]
+            decoded_image = cv2.resize(decoded_image, (self.img_size,
+                self.img_size))
             image_tensor = tf.convert_to_tensor(decoded_image)
+
+            # rescale de bbounding box
+            x_scalar = self.img_size / x_
+            y_scalar = self.img_size / y_
+
+            # Decodificacion de anotaciones
+            cats, locs = self.decode_bboxes(img_data["img/bboxes/category"],
+                    img_data["img/bboxes/x"], img_data["img/bboxes/y"],
+                    img_data["img/bboxes/width"],
+                    img_data["img/bboxes/height"], x_scalar, y_scalar)
+
+            # Crea mask de los indices correctos
+            mask = self.mask_indices(img_data["img/bboxes/category"])
             
-            print(image_tensor)
+            # Aplica mask
+            cats = tf.boolean_mask(cats, mask)
+            locs = tf.boolean_mask(locs, mask)
+
+            num_bboxes = locs.get_shape().as_list()[0]
 
             total_fmaps = len(self.feature_maps)
-            for f_map in self.feature_maps:
-                pass
-        
+            for f in range(total_fmaps):
+                m = self.feature_maps[f][0]
+                priors = PriorsBoxes(features=m, num_fmap=f, total_fmaps=total_fmaps,
+                    aspect_ratios=self.aspect_ratios, img_size=self.img_size)
+
+                for i in range(m):
+                    for j in range(m):
+                        for p in range(self.num_priors):
+                            prior = priors[i][j][p]
+                            for b in range(num_bboxes):
+                                iou = intersection_over_union(bbox_center_to_rect(prior), locs[b])
+                                if iou >= 0.5:
+                                    print(iou)
+
+
+    def decode_bboxes(self, cats, x, y, width, height, x_scalar, y_scalar):
+        cats_tensor = []
+        loc_tensor = []
+
+        for i in cats.indices:
+            cat = cats.values[i[0]].numpy().decode("UTF-8")
+            _x = x.values[i[0]].numpy() * x_scalar
+            _y = y.values[i[0]].numpy() * y_scalar
+            _w = width.values[i[0]].numpy() * x_scalar
+            _h = height.values[i[0]].numpy() * y_scalar
+            
+            cats_tensor.append(cat)
+            loc_tensor.append([_x, _y, _w, _h])
+
+        return tf.convert_to_tensor(cats_tensor), tf.convert_to_tensor(loc_tensor)
+
+    # Funcion que regresa los indeces de los bounding boxes de la categoria a
+    # ser clasificada, para despues aplicar un mask
+    def mask_indices(self, sparse_tensor):
+        indices = sparse_tensor.indices
+        mask = []
+
+        for i in indices:
+            index = i.numpy()[0]
+            cat = sparse_tensor.values[index]
+            cat = cat.numpy().decode("UTF-8")
+            mask.append(cat in self.categories_arr)
+
+        return mask
+
