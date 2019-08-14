@@ -10,6 +10,7 @@ from ops.conv_ops import normal_conv, depthwise_conv, pointwise_conv, ReLU6
 import sys
 sys.path.append("..")
 from utils import tfrecord_coco
+from tests.test_bboxes import draw_bbox
 sys.path.append("ops/")
 
 class ssd_lite_conv(layers.Layer):
@@ -167,7 +168,7 @@ def compute_num_priors(aspect_ratios):
 #   aspect_ratios: arreglo de proporciones
 #   img_size: tamaño de la imagen original
 # Returns:
-#   Tensor with boxes loc of shape (features, features, priors, 4(x, y, w, h))
+#   Tensor with boxes loc of shape (features, features, priors, 4(cx, cy, w, h))
 @tf.function
 def PriorsBoxes(batch_size=None,
                 features=None,
@@ -347,9 +348,8 @@ class SSD_data_pipeline(object):
             # Decodificacion de imagen
             image_string = np.frombuffer(img_data["img/str"].numpy(), np.uint8)
             decoded_image = cv2.imdecode(image_string, cv2.IMREAD_COLOR)
-            x_, y_ = decoded_image.shape[0], decoded_image.shape[1]
-            decoded_image = cv2.resize(decoded_image, (self.img_size,
-                self.img_size))
+            y_, x_ = decoded_image.shape[0], decoded_image.shape[1]
+            decoded_image = cv2.resize(decoded_image, (self.img_size, self.img_size))
             image_tensor = tf.convert_to_tensor(decoded_image)
 
             # rescale de bbounding box
@@ -369,22 +369,29 @@ class SSD_data_pipeline(object):
             cats = tf.boolean_mask(cats, mask)
             locs = tf.boolean_mask(locs, mask)
 
+            print(cats)
+
             num_bboxes = locs.get_shape().as_list()[0]
 
             total_fmaps = len(self.feature_maps)
             for f in range(total_fmaps):
                 m = self.feature_maps[f][0]
-                priors = PriorsBoxes(features=m, num_fmap=f, total_fmaps=total_fmaps,
+                priors = PriorsBoxes(features=m, num_fmap=f+1, total_fmaps=total_fmaps,
                     aspect_ratios=self.aspect_ratios, img_size=self.img_size)
 
                 for i in range(m):
                     for j in range(m):
                         for p in range(self.num_priors):
                             prior = priors[i][j][p]
+                            prior = bbox_center_to_rect(prior)
                             for b in range(num_bboxes):
-                                iou = intersection_over_union(bbox_center_to_rect(prior), locs[b])
+                                draw_bbox(img=decoded_image, bbox=locs[b])
+                                iou = intersection_over_union(prior, locs[b])
                                 if iou >= 0.5:
                                     print(iou)
+
+            cv2.imshow("test", decoded_image)
+            cv2.waitKey(0)
 
 
     def decode_bboxes(self, cats, x, y, width, height, x_scalar, y_scalar):
@@ -392,7 +399,9 @@ class SSD_data_pipeline(object):
         loc_tensor = []
 
         for i in cats.indices:
+            print(i[0])
             cat = cats.values[i[0]].numpy().decode("UTF-8")
+            print(cat)
             _x = x.values[i[0]].numpy() * x_scalar
             _y = y.values[i[0]].numpy() * y_scalar
             _w = width.values[i[0]].numpy() * x_scalar

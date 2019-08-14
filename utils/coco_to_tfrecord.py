@@ -32,7 +32,6 @@ def main():
 def coco_tfrecord(path, res):
     print("[INFO] Loading images paths")
     img_dirs = glob.glob(path + "/*.jpg")
-    anns_dirs = glob.glob(path +  "/*.json")
     num_imgs = len(img_dirs)
 
     if num_imgs > 0:
@@ -40,7 +39,7 @@ def coco_tfrecord(path, res):
         with tf.io.TFRecordWriter(res) as f:
             for i in range(num_imgs):
                 print("Copied {} of {}".format(i+1, num_imgs))
-                example = _image_example(img_path=img_dirs[i], ann_path=anns_dirs[i]) 
+                example = _image_example(img_path=img_dirs[i], ann_path=img_dirs[i]+".json") 
                 f.write(example.SerializeToString())
 
     return None
