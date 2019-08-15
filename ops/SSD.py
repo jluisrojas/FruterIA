@@ -10,6 +10,7 @@ from ops.conv_ops import normal_conv, depthwise_conv, pointwise_conv, ReLU6
 import sys
 sys.path.append("..")
 from utils import tfrecord_coco
+from utils.datasets_features import bytes_feature
 from tests.test_bboxes import draw_bbox
 sys.path.append("ops/")
 
@@ -169,7 +170,6 @@ def compute_num_priors(aspect_ratios):
 #   img_size: tamaño de la imagen original
 # Returns:
 #   Tensor with boxes loc of shape (features, features, priors, 4(cx, cy, w, h))
-@tf.function
 def PriorsBoxes(batch_size=None,
                 features=None,
                 num_fmap=None,
@@ -179,7 +179,7 @@ def PriorsBoxes(batch_size=None,
 
     # metodo de calcula la escala de las cajas
     def compute_scale(k, m):
-        s_min = 0.2
+        s_min = 0.15
         s_max = 0.9
         s_k = s_min + (((s_max - s_min)/(m - 1))*(k - 1))
 
@@ -256,6 +256,7 @@ def bbox_center_to_rect(loc):
     y = loc[1] - (h/2)
 
     return int(x), int(y), int(w), int(h)
+
 #
 # Converte cordenadas (x, y, w, h) a (cx, cy, w, h)
 # Args:
@@ -269,6 +270,28 @@ def bbox_rect_to_center(loc):
     cy = loc[1] + (h/2)
 
     return int(x), int(y), int(w), int(h)
+#
+# Converte cordenadas (x, y, w, h) a (cx, cy, w, h)
+# Args:
+#   loc: tensor of shape [4]
+# Returns:
+#   tensor of shape [4] (cx, cy, w, h)
+def tbbox_rect_to_center(loc):
+    w = loc[2]
+    h = loc[3]
+    cx = loc[0] + (w/2)
+    cy = loc[1] + (h/2)
+
+    return tf.convert_to_tensor(np.array([cx, cy, w, h]))
+
+def rect_to_coord(box):
+    _box = np.copy(box)
+    box[0] = _box[0]
+    box[1] = _box[1]
+    box[2] = box[0] + _box[2]
+    box[3] = box[1] + _box[3]
+
+    return box
 
 #
 # Calcula el jaccard overlap o intesection over union IOU
@@ -282,6 +305,9 @@ def intersection_over_union(t_boxA, t_boxB):
     # Se convierte los tensores  a numpy arrays
     boxA = np.array(t_boxA)
     boxB = np.array(t_boxB)
+
+    boxA = rect_to_coord(boxA)
+    boxB = rect_to_coord(boxB)
     
     xA = max(boxA[0], boxB[0])
     yA = max(boxA[1], boxB[1])
@@ -320,6 +346,7 @@ class SSD_data_pipeline(object):
         self.aspect_ratios = aspect_ratios
         self.feature_maps = feature_maps
         self.categories_arr = categories_arr
+        self.num_categories = len(self.categories_arr)
         self.img_size = img_size
         self.num_priors = compute_num_priors(aspect_ratios)
 
@@ -336,21 +363,28 @@ class SSD_data_pipeline(object):
         pass
 
     def preprocess_tfrecord_coco(self, path_to_tfrecord):
-        
+        total_fmaps = len(self.feature_maps)
         dataset_tfrecord_coco = tfrecord_coco.parse_dataset(path_to_tfrecord)
         
         it = iter(dataset_tfrecord_coco)
 
-        for _ in range(10):
+        writer = tf.io.TFRecordWriter("../datasets/ssd_preprocess.tfrecord")
+
+        for _ in range(50):
             print("image:")
             img_data = next(it)
 
             # Decodificacion de imagen
             image_string = np.frombuffer(img_data["img/str"].numpy(), np.uint8)
             decoded_image = cv2.imdecode(image_string, cv2.IMREAD_COLOR)
+
+            # tamaños original de la imagen
             y_, x_ = decoded_image.shape[0], decoded_image.shape[1]
+
+            # resize de la imagen y la convierte a un tensor
             decoded_image = cv2.resize(decoded_image, (self.img_size, self.img_size))
             image_tensor = tf.convert_to_tensor(decoded_image)
+            image_tensor /= 255 # normaliza entre 0-1
 
             # rescale de bbounding box
             x_scalar = self.img_size / x_
@@ -369,15 +403,21 @@ class SSD_data_pipeline(object):
             cats = tf.boolean_mask(cats, mask)
             locs = tf.boolean_mask(locs, mask)
 
-            print(cats)
-
             num_bboxes = locs.get_shape().as_list()[0]
-
-            total_fmaps = len(self.feature_maps)
+            y_true = []
+            num_matches = 0
+            
+            """
+            # debugging
+            for loc in locs:
+                draw_bbox(img=decoded_image, bbox=loc)
+            """
+                
             for f in range(total_fmaps):
                 m = self.feature_maps[f][0]
-                priors = PriorsBoxes(features=m, num_fmap=f+1, total_fmaps=total_fmaps,
-                    aspect_ratios=self.aspect_ratios, img_size=self.img_size)
+                priors = PriorsBoxes(features=m, num_fmap=f+1, total_fmaps=total_fmaps, 
+                        aspect_ratios=self.aspect_ratios, img_size=self.img_size)
+                feature_y = np.zeros((m, m, self.num_priors, 1 + self.num_categories + 4))
 
                 for i in range(m):
                     for j in range(m):
@@ -385,23 +425,69 @@ class SSD_data_pipeline(object):
                             prior = priors[i][j][p]
                             prior = bbox_center_to_rect(prior)
                             for b in range(num_bboxes):
-                                draw_bbox(img=decoded_image, bbox=locs[b])
                                 iou = intersection_over_union(prior, locs[b])
-                                if iou >= 0.5:
-                                    print(iou)
+                                if iou > 0.5:
+                                    num_matches += 1
+                                    match = tf.ones([1, 1])
 
+                                    # Se obtiene la categoria y se convierte a one hot
+                                    cat = cats[b].numpy().decode("UTF-8")
+                                    cat_one_hot = [self.categories_index[cat]]
+                                    cat_one_hot = tf.one_hot(cat_one_hot, self.num_categories)
+
+                                    # se calcula la diferencia del prior al  ground truth
+                                    diff = tf.cast(tf.abs(tbbox_rect_to_center(prior) - tbbox_rect_to_center(locs[b])),
+                                            tf.float32)
+                                    diff = tf.expand_dims(diff, 0)
+                                    
+                                    match_y = tf.concat([match, cat_one_hot, diff], -1)
+                                    feature_y[i][j][p] = match_y
+
+                                    """
+                                    draw_bbox(img=decoded_image, bbox=prior,
+                                            color=(255, 0, 0))
+                                    """
+                
+                feature_y = tf.convert_to_tensor(feature_y)
+                if f == 0:
+                    y_true = tf.identity(tf.reshape(feature_y, [m*m, self.num_priors, 1 +
+                        self.num_categories + 4]))
+                else:
+                    feature_y = tf.reshape(feature_y, [m*m, self.num_priors, 1 +
+                        self.num_categories + 4])
+                    y_true = tf.concat([y_true, tf.identity(feature_y)], 0)
+
+            """
             cv2.imshow("test", decoded_image)
             cv2.waitKey(0)
+            """
+            if num_matches > 0:
+                y_true = tf.cast(y_true, tf.float32)
+                image_tensor = tf.cast(image_tensor, tf.float32)
+                data = {
+                    "x": bytes_feature(tf.io.serialize_tensor(image_tensor)),
+                    "y": bytes_feature(tf.io.serialize_tensor(y_true))
+                }
+                example = tf.train.Example(features=tf.train.Features(feature=data))
+                writer.write(example.SerializeToString())
 
+        writer.close()
 
+    # proces y cambia el formato de las annotacions de las images de tfrecord
+    # Args:
+    #   cats: sparse tensor de strings con las categorias
+    #   x: sparse tensor con las coordenadas x del bbox
+    #   y: sparse tensor con las coordenadas y del bbox
+    #   width: sparse tensor con en ancho del bbox
+    #   height: sparse tensor con la altura del bbox
+    #   x_scalar: scalar horizontal que se le aplica al bbox por el resize de la img
+    #   y_scalar: scalar vertical que se le aplica al bbox por el resize de la img
     def decode_bboxes(self, cats, x, y, width, height, x_scalar, y_scalar):
         cats_tensor = []
         loc_tensor = []
 
         for i in cats.indices:
-            print(i[0])
             cat = cats.values[i[0]].numpy().decode("UTF-8")
-            print(cat)
             _x = x.values[i[0]].numpy() * x_scalar
             _y = y.values[i[0]].numpy() * y_scalar
             _w = width.values[i[0]].numpy() * x_scalar
@@ -412,8 +498,10 @@ class SSD_data_pipeline(object):
 
         return tf.convert_to_tensor(cats_tensor), tf.convert_to_tensor(loc_tensor)
 
-    # Funcion que regresa los indeces de los bounding boxes de la categoria a
-    # ser clasificada, para despues aplicar un mask
+    # Funcion que regresa un mask booleano de los bbox que se van usar para el
+    # modelo, segun las categirias a clasificar
+    # Args:
+    #   sparse_tensor: sparse tensor con las cadenas de las categorias
     def mask_indices(self, sparse_tensor):
         indices = sparse_tensor.indices
         mask = []
@@ -426,3 +514,5 @@ class SSD_data_pipeline(object):
 
         return mask
 
+def SSD_load_data(path_to_tfrecord):
+    return None, None

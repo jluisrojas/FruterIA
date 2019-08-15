@@ -178,7 +178,7 @@ class MobileNetV2_SSD(Model):
 
     @staticmethod
     def get_fmaps_array():
-        return [(20, 20), (10, 10), (5, 5), (3, 3), (2, 2), (1, 1)]
+        return [(20, 20), (10, 10), (5, 5), (3, 3),  (1, 1)]
 
     @staticmethod
     def get_input_size():
