@@ -355,24 +355,21 @@ class SSD_data_pipeline(object):
         for i in range(len(self.categories_arr)):
             self.categories_index[self.categories_arr[i]] = i
 
-    # Procesa un batch de imagenes para convertirlos a training data
+    # Procesa un batch de imagenes del data set de coco para convertirlos a training data
     # Argumentos:
-    #   image_batch: tensor de shape [batch_size, size, size, r, g, b]
-    #   y_true: tensor de shape [batch_size, categorias + 4]
-    def process(self, image_batch, y_true):
-        pass
-
-    def preprocess_tfrecord_coco(self, path_to_tfrecord):
+    #   path_to_tfrecord: string al dataset de coco en formato tfrecord
+    def preprocess_tfrecord_coco(self, path_to_tfrecord, res_path):
         total_fmaps = len(self.feature_maps)
         dataset_tfrecord_coco = tfrecord_coco.parse_dataset(path_to_tfrecord)
         
         it = iter(dataset_tfrecord_coco)
 
-        writer = tf.io.TFRecordWriter("../datasets/ssd_preprocess.tfrecord")
+        writer = tf.io.TFRecordWriter(res_path)
+        i = 0
 
-        for _ in range(50):
-            print("image:")
-            img_data = next(it)
+        for img_data in dataset_tfrecord_coco:
+            print("Processing image {}".format(i+1))
+            i += 1
 
             # Decodificacion de imagen
             image_string = np.frombuffer(img_data["img/str"].numpy(), np.uint8)
@@ -514,5 +511,29 @@ class SSD_data_pipeline(object):
 
         return mask
 
-def SSD_load_data(path_to_tfrecord):
-    return None, None
+def SSD_load_dataset(path_to_tfrecord):
+    raw_data = tf.data.TFRecordDataset(path_to_tfrecord)
+    format_ = {
+        "x": tf.io.FixedLenFeature([],
+            tf.string),
+        "y": tf.io.FixedLenFeature([], tf.string)
+    }
+
+    def _parse_function(example):
+        return tf.io.parse_single_example(example, format_)
+
+    data = raw_data.map(_parse_function)
+
+
+    def _parse_tensors(example):
+        x = tf.io.parse_tensor(example["x"], tf.float32)
+        y_true = tf.io.parse_tensor(example["y"], tf.float32)
+
+        return x, y_true
+
+    tensor_data = data.map(_parse_tensors)
+
+    return tensor_data
+
+
+
