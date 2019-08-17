@@ -515,7 +515,7 @@ class SSD_data_pipeline(object):
 # Args:
 #   path_to_tfrecord: string con el path al archivo tfrecord
 # Returns
-#   tensor_data: tensorflow Dataset object
+#   tensor_data: tensorflow Dataset object.
 def SSD_load_dataset(path_to_tfrecord):
     raw_data = tf.data.TFRecordDataset(path_to_tfrecord)
     format_ = {
