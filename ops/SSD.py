@@ -361,6 +361,9 @@ class SSD_data_pipeline(object):
     def preprocess_tfrecord_coco(self, path_to_tfrecord, res_path):
         total_fmaps = len(self.feature_maps)
         dataset_tfrecord_coco = tfrecord_coco.parse_dataset(path_to_tfrecord)
+
+        def gen_match():
+            pass
         
         it = iter(dataset_tfrecord_coco)
 
