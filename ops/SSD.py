@@ -315,6 +315,7 @@ def intersection_over_union(t_boxA, t_boxB):
     yB = min(boxA[3], boxB[3])
 
     interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+    print(interArea)
 
     boxAArea = (boxA[2] - boxA[0] + 1) * (boxA[3] - boxA[1] + 1)
     boxBArea = (boxB[2] - boxB[0] + 1) * (boxB[3] - boxB[1] + 1)
@@ -543,5 +544,27 @@ def SSD_load_dataset(path_to_tfrecord):
 
     return tensor_data
 
+#
+# Metodos para SSD data augmentation
 
+# Metodo que calcula IOU entre 2 batchs de bboxes
+# Args:
+#   boxA: tensor of shape [?, 4] (x, y, w, h)
+#   boxB: tensor of shape [?, 4] (x, y, w, h)
+def iou_batch(_boxA, _boxB):
+    boxA = np.copy(_boxA)
+    boxB = np.copy(_boxB)
+    # Convierte a (x, y, w+x, h+y)
+    boxA[:, 2:] = boxA[:, :2] + _boxA[:, 2:]
+    boxB[:, 2:] = boxB[:, :2] + _boxB[:, 2:]
+
+    # Calcula la interseccion
+    xA = tf.math.maximum(boxA[:, 0], boxB[:, 0])
+    yA = tf.math.maximum(boxA[:, 1], boxB[:, 1])
+    xB = tf.math.minimum(boxA[:, 2], boxB[:, 2])
+    yB = tf.math.minimum(boxA[:, 3], boxB[:, 3])
+
+    interArea = tf.math.maximum(0, xB - xA + 1) * tf.math.maximum(0, yB - yA + 1)
+    print(interArea)
+    
 
