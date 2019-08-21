@@ -1,4 +1,5 @@
 import math
+import random
 import cv2
 import numpy as np
 import tensorflow as tf
@@ -315,7 +316,6 @@ def intersection_over_union(t_boxA, t_boxB):
     yB = min(boxA[3], boxB[3])
 
     interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
-    print(interArea)
 
     boxAArea = (boxA[2] - boxA[0] + 1) * (boxA[3] - boxA[1] + 1)
     boxBArea = (boxB[2] - boxB[0] + 1) * (boxB[3] - boxB[1] + 1)
@@ -565,6 +565,137 @@ def iou_batch(_boxA, _boxB):
     yB = tf.math.minimum(boxA[:, 3], boxB[:, 3])
 
     interArea = tf.math.maximum(0, xB - xA + 1) * tf.math.maximum(0, yB - yA + 1)
-    print(interArea)
+
+    boxAArea = (boxA[:,2] - boxA[:,0] + 1) * (boxA[:,3] - boxA[:,1] + 1)
+    boxBArea = (boxB[:,2] - boxB[:,0] + 1) * (boxB[:,3] - boxB[:,1] + 1)
+
+    iou = interArea / (boxAArea + boxBArea - interArea)
+
+    return iou
+
+# Metodo que genera un patch a la imagen, segun paper de ssd
+# Args:
+#   image: tensor of shape (height, width, 3)
+#   locs: tensor con localizacion de bbox de shape [?, 4]
+#   cats: tensor con las categorias de los bbox, de shape [?]
+# Returns:
+#   igual que args pero con el patch aplicado a la imagen
+def ssd_sample_patch(image, locs, cats):
+    image = np.array(image)
+    locs = np.array(locs)
+    cats = np.array(cats)
+    sample_options = (
+            # Original input image
+            None,
+            # patch con min iou .1, .3, .7, .9
+            (0.1, None),
+            (0.3, None),
+            (0.7, None),
+            (0.9, None),
+            # random patch
+            (None, None)
+        )
+
+    height, width, _ = image.shape
+    while(True):
+        # Escoger un modo de forma aleatoria
+        mode = random.choice(sample_options)
+        if mode is None:
+            return image, locs, cats
+
+        min_iou, max_iou = mode
+        if min_iou is None:
+            min_iou = float("-inf")
+        if max_iou is None:
+            max_iou = float("inf")
+
+        # Maximos intentos (50)
+        for _ in range(50):
+            current_image = image
+
+            w = random.uniform(0.3*width, width)
+            h = random.uniform(0.3*height, height)
+
+            # aspcect ratio esta entre .5 y 2
+            if h / w < 0.5 or h / w > 2:
+                continue
+
+            left = random.uniform(0, width - w)
+            top = random.uniform(0, height - h)
+
+            # convert to rect
+            rect = np.array([int(left), int(top), int(w), int(h)])
+
+            # calcular iou
+            overlap = iou_batch(locs, np.array([rect]))
+            overlap = np.array(overlap)
+
+            # si se satisface las restricciones del iou
+            if overlap.min() < min_iou and max_iou > overlap.max():
+                continue
+
+            # Obtiene crop de la imagen
+            current_image = current_image[rect[1]:rect[1]+rect[3],
+                    rect[0]:rect[0]+rect[2], :]
+
+            centers = locs[:, :2] + (locs[:, 2:] / 2.0)
+
+            # mask locs 
+            m1 = (rect[0] < centers[:, 0]) * (rect[1] < centers[:, 1])
+            m2 = (rect[0]+rect[2] > centers[:, 0]) * (rect[1]+rect[3] > centers[:, 1])
+            mask = m1 * m2
+
+            # si se tiene boxes validas
+            if not mask.any():
+                continue
+
+            # aplica mask a bboxes y cats
+            current_locs = locs[mask, :].copy()
+            current_cats = cats[mask].copy()
+
+            # cambia dataformat para corregir coordenadas de bboxes
+            rect[2:] = rect[:2] + rect[2:]
+            current_locs[:, 2:] = current_locs[:,:2] + current_locs[:, 2:]
+
+            # should we use the box left and top corner or the crop's
+            current_locs[:, :2] = np.maximum(current_locs[:, :2], rect[:2])
+            # adjust to crop (by substracting crop's left,top)
+            current_locs[:, :2] -= rect[:2]
+
+            current_locs[:, 2:] = np.minimum(current_locs[:, 2:], rect[2:])
+            # adjust to crop (by substracting crop's left,top)
+            current_locs[:, 2:] -= rect[:2]
+
+            # regreisa al formato correcto (x,y,w,h)
+            current_locs[:, 2:] = current_locs[:, 2:] - current_locs[:, :2]
+
+            return current_image, current_locs, current_cats
+
+# Metodo que expande una imagen, rellena lo demas con el mean
+# esto segun la implementacion descrita en el paper SSD
+# Args:
+#   image: tensor con la imagen de shape [width, height, 3]
+#   locs: tensor con los bboxes de la img [?, 4]
+# Returns:
+#   same as input, but expanded
+def ssd_expand_image(image, locs):
+    image = np.array(image)
+    locs = np.array(locs)
+
+    height, width, depth = image.shape
+    ratio = random.uniform(1, 4)
+    left = random.uniform(0, width*ratio - width)
+    top = random.uniform(0, height*ratio - height)
+
+    expand_image = np.zeros((int(height*ratio), int(width*ratio), depth),
+            dtype=image.dtype)
+    expand_image[:, :, :] = np.mean(image)
+    expand_image[int(top):int(top+height), int(left):int(left+width)] = image
+    image = expand_image
+    
+    locs = locs.copy()
+    locs[:, :2] += (int(left), int(top))
+
+    return image, locs 
     
 
