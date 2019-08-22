@@ -65,14 +65,14 @@ class SSD_layer(layers.Layer):
                  weight_decay=1e-4,
                  name="SSD_layer", **kwargs):
         super(SSD_layer, self).__init__(name=name, **kwargs)
-        
+
         self.classes = classes
         self.aspect_ratios = aspect_ratios
 
         # calcula el numero de priors dependiendo de los aspect ratios
         # siguiendo la implemetacion del paper
         self.priors = compute_num_priors(aspect_ratios)
-        
+
         self.num_fmap = num_fmap
         self.total_fmaps = total_fmaps
         self.img_size = img_size
@@ -91,7 +91,7 @@ class SSD_layer(layers.Layer):
         # de bounding box
         self.conv_conf = ssd_lite_conv(self.priors*self.classes)
         """
-        self.conv_conf = normal_conv(self.priors*self.classes, (3, 3), 
+        self.conv_conf = normal_conv(self.priors*self.classes, (3, 3),
             name=name+"_conv_conf",
             padding="SAME")
         """
@@ -117,7 +117,7 @@ class SSD_layer(layers.Layer):
 
         return config
 
-    
+
     # Recive el feature map y calcula lo siguiente:
     #   conf: tensor shape (batch, features, features, priors, classes)
     #   loc: tensor shape (batch, features, features, priors, 4(dx,dy,dw,dh)
@@ -133,7 +133,7 @@ class SSD_layer(layers.Layer):
         bpriors = PriorsBoxes(batch_size=b_size, features=features, num_fmap=self.num_fmap,
                 total_fmaps=self.total_fmaps, aspect_ratios=self.aspect_ratios,
                 img_size=self.img_size)
-        
+
         # reshape clasification de las convoluciones
         conf = tf.reshape(conf, [b_size, features*features,
             self.priors, self.classes])
@@ -185,7 +185,7 @@ def PriorsBoxes(batch_size=None,
         s_k = s_min + (((s_max - s_min)/(m - 1))*(k - 1))
 
         return s_k
-    
+
     # calcula el ancho y alto de una caja segun su escala y proporcion
     def box_size(scale, aspect_ratio):
         h = scale/math.sqrt(aspect_ratio)
@@ -232,11 +232,11 @@ def PriorsBoxes(batch_size=None,
 
     default_boxes *= img_size
     default_boxes = tf.convert_to_tensor(default_boxes)
-   
+
     # Checa si se especifico un batch_size en los parametros
     # si si, agrega una dimension y duplica las otras mediante tiling
     if batch_size == None:
-        return default_boxes 
+        return default_boxes
     else:
         default_boxes = tf.reshape(default_boxes, [features*features, priors, 4])
         default_boxes = tf.expand_dims(default_boxes, 0)
@@ -309,7 +309,7 @@ def intersection_over_union(t_boxA, t_boxB):
 
     boxA = rect_to_coord(boxA)
     boxB = rect_to_coord(boxB)
-    
+
     xA = max(boxA[0], boxB[0])
     yA = max(boxA[1], boxB[1])
     xB = min(boxA[2], boxB[2])
@@ -339,9 +339,9 @@ class SSD_data_pipeline(object):
     #   feature_maps: arreglo conteniendo pares con los tamaños de los f maps
     #   categories_arr: arreglo de strings con los nombre de las categorias
     #   img_size: entero que contiene el numero de pixeles de un lado de la img
-    def __init__(self, 
-                 aspect_ratios=[1, 2, 3, 1/2, 1/3], 
-                 feature_maps=None, 
+    def __init__(self,
+                 aspect_ratios=[1, 2, 3, 1/2, 1/3],
+                 feature_maps=None,
                  categories_arr=None,
                  img_size=None):
         self.aspect_ratios = aspect_ratios
@@ -363,15 +363,83 @@ class SSD_data_pipeline(object):
         total_fmaps = len(self.feature_maps)
         dataset_tfrecord_coco = tfrecord_coco.parse_dataset(path_to_tfrecord)
 
-        def gen_match():
-            pass
-        
+        def gen_match(img_cats, img_locs, debugging=False, debug_image=None):
+            y_true = None
+            num_bboxes = locs.get_shape().as_list()[0]
+            num_matches = 0
+
+            if debugging:
+                for loc in locs:
+                    draw_bbox(img=debug_image, bbox=loc)
+
+            for f in range(total_fmaps):
+                m = self.feature_maps[f][0]
+                priors = PriorsBoxes(features=m, num_fmap=f+1, total_fmaps=total_fmaps,
+                        aspect_ratios=self.aspect_ratios, img_size=self.img_size)
+                feature_y = np.zeros((m, m, self.num_priors, 1 + self.num_categories + 4))
+
+                for i in range(m):
+                    for j in range(m):
+                        for p in range(self.num_priors):
+                            prior = priors[i][j][p]
+                            prior = bbox_center_to_rect(prior)
+                            for b in range(num_bboxes):
+                                iou = intersection_over_union(prior, img_locs[b])
+                                if iou > 0.5:
+                                    num_matches += 1
+                                    match = tf.ones([1, 1])
+
+                                    # Se obtiene la categoria y se convierte a one hot
+                                    cat = img_cats[b].numpy().decode("UTF-8")
+                                    cat_one_hot = [self.categories_index[cat]]
+                                    cat_one_hot = tf.one_hot(cat_one_hot, self.num_categories)
+
+                                    # se calcula la diferencia del prior al  ground truth
+                                    prior = tbbox_rect_to_center(prior)
+                                    loc = tbbox_rect_to_center(img_locs[b])
+                                    diff = tf.cast(tf.abs(prior - loc),
+                                            tf.float32)
+                                    diff = tf.expand_dims(diff, 0)
+
+                                    match_y = tf.concat([match, cat_one_hot, diff], -1)
+                                    feature_y[i][j][p] = match_y
+
+                                    if debugging:
+                                        draw_bbox(img=debug_image, bbox=prior, color=(255, 0, 0))
+
+                feature_y = tf.convert_to_tensor(feature_y)
+                if f == 0:
+                    y_true = tf.identity(tf.reshape(feature_y, [m*m, self.num_priors, 1 +
+                        self.num_categories + 4]))
+                else:
+                    feature_y = tf.reshape(feature_y, [m*m, self.num_priors, 1 +
+                        self.num_categories + 4])
+                    y_true = tf.concat([y_true, tf.identity(feature_y)], 0)
+
+            if num_matches > 0:
+                y_true = tf.cast(y_true, tf.float32)
+
+            if num_matches == 0:
+                return None
+
+            return y_true
+
         it = iter(dataset_tfrecord_coco)
 
         writer = tf.io.TFRecordWriter(res_path)
+
+        def write_img_to_file(x_data, y_data):
+            x_data = tf.cast(x_data, tf.float32)
+            data = {
+                "x": bytes_feature(tf.io.serialize_tensor(x_data)),
+                "y": bytes_feature(tf.io.serialize_tensor(y_data))
+            }
+            example = tf.train.Example(features=tf.train.Features(feature=data))
+            writer.write(example.SerializeToString())
+
         i = 0
 
-        for img_data in dataset_tfrecord_coco:
+        for img_data in dataset_tfrecord_coco.take(1):
             print("Processing image {}".format(i+1))
             i += 1
 
@@ -381,11 +449,6 @@ class SSD_data_pipeline(object):
 
             # tamaños original de la imagen
             y_, x_ = decoded_image.shape[0], decoded_image.shape[1]
-
-            # resize de la imagen y la convierte a un tensor
-            decoded_image = cv2.resize(decoded_image, (self.img_size, self.img_size))
-            image_tensor = tf.convert_to_tensor(decoded_image)
-            image_tensor /= 255 # normaliza entre 0-1
 
             # rescale de bbounding box
             x_scalar = self.img_size / x_
@@ -399,78 +462,47 @@ class SSD_data_pipeline(object):
 
             # Crea mask de los indices correctos
             mask = self.mask_indices(img_data["img/bboxes/category"])
-            
+
             # Aplica mask
             cats = tf.boolean_mask(cats, mask)
             locs = tf.boolean_mask(locs, mask)
 
-            num_bboxes = locs.get_shape().as_list()[0]
-            y_true = []
-            num_matches = 0
-            
-            """
-            # debugging
-            for loc in locs:
-                draw_bbox(img=decoded_image, bbox=loc)
-            """
-                
-            for f in range(total_fmaps):
-                m = self.feature_maps[f][0]
-                priors = PriorsBoxes(features=m, num_fmap=f+1, total_fmaps=total_fmaps, 
-                        aspect_ratios=self.aspect_ratios, img_size=self.img_size)
-                feature_y = np.zeros((m, m, self.num_priors, 1 + self.num_categories + 4))
+            # Crea un patch para data augmentation
+            aug_image, locs, cats = ssd_sample_patch(decoded_image, locs, cats)
+            locs_cp = locs.copy()
 
-                for i in range(m):
-                    for j in range(m):
-                        for p in range(self.num_priors):
-                            prior = priors[i][j][p]
-                            prior = bbox_center_to_rect(prior)
-                            for b in range(num_bboxes):
-                                iou = intersection_over_union(prior, locs[b])
-                                if iou > 0.5:
-                                    num_matches += 1
-                                    match = tf.ones([1, 1])
+            # resize de la imagen y la convierte a un tensor
+            resized_img = cv2.resize(aug_image, (self.img_size, self.img_size))
+            aug_image_cp = resized_img.copy()
+            image_tensor = tf.convert_to_tensor(resized_img)
+            image_tensor /= 255 # normaliza entre 0-1
 
-                                    # Se obtiene la categoria y se convierte a one hot
-                                    cat = cats[b].numpy().decode("UTF-8")
-                                    cat_one_hot = [self.categories_index[cat]]
-                                    cat_one_hot = tf.one_hot(cat_one_hot, self.num_categories)
+            locs = tf.convert_to_tensor(locs)
+            cats = tf.convert_to_tensor(cats)
 
-                                    # se calcula la diferencia del prior al  ground truth
-                                    diff = tf.cast(tf.abs(tbbox_rect_to_center(prior) - tbbox_rect_to_center(locs[b])),
-                                            tf.float32)
-                                    diff = tf.expand_dims(diff, 0)
-                                    
-                                    match_y = tf.concat([match, cat_one_hot, diff], -1)
-                                    feature_y[i][j][p] = match_y
-
-                                    """
-                                    draw_bbox(img=decoded_image, bbox=prior,
-                                            color=(255, 0, 0))
-                                    """
-                
-                feature_y = tf.convert_to_tensor(feature_y)
-                if f == 0:
-                    y_true = tf.identity(tf.reshape(feature_y, [m*m, self.num_priors, 1 +
-                        self.num_categories + 4]))
-                else:
-                    feature_y = tf.reshape(feature_y, [m*m, self.num_priors, 1 +
-                        self.num_categories + 4])
-                    y_true = tf.concat([y_true, tf.identity(feature_y)], 0)
-
-            """
-            cv2.imshow("test", decoded_image)
+            y = gen_match(cats, locs, debugging=True, debug_image=resized_img)
+            cv2.imshow("matching strategy", resized_img)
             cv2.waitKey(0)
-            """
-            if num_matches > 0:
-                y_true = tf.cast(y_true, tf.float32)
-                image_tensor = tf.cast(image_tensor, tf.float32)
-                data = {
-                    "x": bytes_feature(tf.io.serialize_tensor(image_tensor)),
-                    "y": bytes_feature(tf.io.serialize_tensor(y_true))
-                }
-                example = tf.train.Example(features=tf.train.Features(feature=data))
-                writer.write(example.SerializeToString())
+
+            if y != None:
+                write_img_to_file(image_tensor, y)
+
+                # obtiene la imagen y localizaciones expandidas
+                ex_img, ex_locs = ssd_expand_image(aug_image_cp, locs_cp)
+                ex_img = cv2.resize(ex_img, (self.img_size, self.img_size))
+                image_tensor = tf.convert_to_tensor(ex_img)
+                image_tensor /= 255 # normaliza entre 0-1
+
+                ex_locs = tf.convert_to_tensor(ex_locs)
+
+                ex_y = gen_match(cats, ex_locs, debugging=True, debug_image=ex_img)
+
+                print("Expanded image")
+                cv2.imshow("matching strategy expanded", ex_img)
+                cv2.waitKey(0)
+
+                if ex_y != None:
+                    write_img_to_file(image_tensor, ex_y)
 
         writer.close()
 
@@ -493,7 +525,7 @@ class SSD_data_pipeline(object):
             _y = y.values[i[0]].numpy() * y_scalar
             _w = width.values[i[0]].numpy() * x_scalar
             _h = height.values[i[0]].numpy() * y_scalar
-            
+
             cats_tensor.append(cat)
             loc_tensor.append([_x, _y, _w, _h])
 
@@ -640,7 +672,7 @@ def ssd_sample_patch(image, locs, cats):
 
             centers = locs[:, :2] + (locs[:, 2:] / 2.0)
 
-            # mask locs 
+            # mask locs
             m1 = (rect[0] < centers[:, 0]) * (rect[1] < centers[:, 1])
             m2 = (rect[0]+rect[2] > centers[:, 0]) * (rect[1]+rect[3] > centers[:, 1])
             mask = m1 * m2
@@ -683,7 +715,7 @@ def ssd_expand_image(image, locs):
     locs = np.array(locs)
 
     height, width, depth = image.shape
-    ratio = random.uniform(1, 4)
+    ratio = random.uniform(2, 4)
     left = random.uniform(0, width*ratio - width)
     top = random.uniform(0, height*ratio - height)
 
@@ -692,10 +724,8 @@ def ssd_expand_image(image, locs):
     expand_image[:, :, :] = np.mean(image)
     expand_image[int(top):int(top+height), int(left):int(left+width)] = image
     image = expand_image
-    
+
     locs = locs.copy()
     locs[:, :2] += (int(left), int(top))
 
     return image, locs 
-    
-
