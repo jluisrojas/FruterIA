@@ -15,6 +15,22 @@ from utils.datasets_features import bytes_feature
 from tests.test_bboxes import draw_bbox
 sys.path.append("ops/")
 
+"""
+ATENCION:
+    Ahorita el desarrollo de SSD para FrutAI esta en standby, para poder mejor
+    probar la idea con un dataset mas simple, ya despues se continuara con el
+    desarrollo.
+    Los pendientes para terminar SSD:
+        - Agregar la categiria de fondo al preprocesamiento de img
+        - Corregir data augmentation cuando se realiza expand
+        - Generar dataset preprocesado
+        - Crear loss function de ssd
+        - Entrenar modelo
+        - Metodos para decodificacion de output, como:
+            - Non-max supression
+            - Resize de bboxes, etc.
+"""
+
 class ssd_lite_conv(layers.Layer):
     # Args:
     #   filters: numero de filtros que se aplica en total
