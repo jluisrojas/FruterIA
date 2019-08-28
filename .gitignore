@@ -2,5 +2,10 @@
 *.DS_Store
 *.swp
 
-# Ignorar la carpet datasets
-datasets/
+# Ignorar ciertas carpetas de datasets
+datasets/101_ObjectCategories/
+datasets/coco/cocofruits/
+datasets/coco/cocofruits.tfrecord
+datasets/Fruits360/test/
+datasets/Fruits360/test-multiple-fruits/
+datasets/Fruits360/training/
