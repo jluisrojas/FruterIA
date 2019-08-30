@@ -88,7 +88,7 @@ class LayerList():
     # Realiza feed forward en las layers
     def feed_forward(self, inputs, training=None):
         x = inputs
-        print(x.get_shape())
+        ##print(x.get_shape())
 
         for layer in self.layers_list:
             # Si hay input especial
@@ -96,8 +96,9 @@ class LayerList():
                 x = self.saved_ref[layer.custom_input].outputs[layer.custom_input_index]
 
             x = layer(x, training)
-            print(layer.layer.name)
-            print(x.get_shape())
+
+            #print(layer.layer.name)
+            #print(x.get_shape())
 
         return x
 

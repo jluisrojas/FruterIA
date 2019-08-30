@@ -11,9 +11,12 @@ test_path = "f360_test.tfrecord"
 # Returns:
 #   train_data: Dataset de entrenameinto
 #   test_data: Dataset de pruebas
-def load_dataset():
-    train_raw_data = tf.data.TFRecordDataset(train_path)
-    test_raw_data = tf.data.TFRecordDataset(test_path)
+def load_dataset(path=None):
+    if path == None:
+        path = ""
+
+    train_raw_data = tf.data.TFRecordDataset(path+train_path)
+    test_raw_data = tf.data.TFRecordDataset(path+test_path)
 
     _format = {
         "x": tf.io.FixedLenFeature([], tf.string),
@@ -24,6 +27,11 @@ def load_dataset():
         ex = tf.io.parse_single_example(example, _format)
         x = tf.io.parse_tensor(ex["x"], tf.float32)
         y = tf.io.parse_tensor(ex["y"], tf.float32)
+
+        data_dict = {
+            "x": x,
+            "y": y
+        }
 
         return x, y
 
