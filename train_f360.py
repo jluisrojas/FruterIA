@@ -1,4 +1,6 @@
 import tensorflow as tf
+import numpy as np
+from tensorflow.keras.models import Sequential
 import cv2
 
 # Importa cosas de Keras API
@@ -18,8 +20,8 @@ def main():
     print("[INFO] Loading dataset")
     train, test = load_dataset("datasets/Fruits360/")
 
-    # Cambia el tamaño de la datset
-    def _resize_dataset(x: tf.Tensor, y: tf.Tensor):
+    # Cambia el tamano de la datset
+    def _resize_dataset(x, y):
         x.set_shape([100, 100, 3]) # Estas especificando que realmente el shape
         x = tf.image.resize(x, [224, 224])
 
@@ -33,7 +35,9 @@ def main():
 
     print("[INFO] Compiling model")
     
-    model = MobileNetV2(num_classes)
+    #model = MobileNetV2.build_model(3)
+    model = tf.keras.applications.MobileNetV2(input_shape=(224, 224, 3),
+            weights='imagenet', include_top=False)
     
     opt = Adam(lr=3e-4)
     model.compile(loss="categorical_crossentropy", optimizer=opt,

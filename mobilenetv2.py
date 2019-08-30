@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.keras import Model
+from tensorflow.keras import Model, Sequential
 from tensorflow.keras import layers
 from ops.conv_ops import normal_conv, ReLU6, pointwise_conv
 from ops.conv_blocks import BottleneckResidualBlock, basic_conv_block
@@ -11,6 +11,52 @@ from ops.SSD import SSD_layer
 # Implementacion de MobilenetV2, suponiendo un input size de 224x224x3
 #
 class MobileNetV2(Model):
+    @staticmethod
+    def build_model(classes, width_multiplier=1):
+        a = width_multiplier
+        model = Sequential()
+
+        def crearBloques2(input_channels, t, c, n, s):
+            for i in range(n):
+                # Solo el primer bloque tiene stride 2
+                # a partir del segundo bottleneck el numero de input_channels es igual al output_channels
+                if i > 0:
+                    s = 1
+                    input_channels = c
+
+                l_num = 1
+                l_res = BottleneckResidualBlock(input_channels, int(c), stride=s, t=t,
+                        name="layer_{}_BottleneckResidualBlock".format(l_num))
+                model.add(l_res)
+
+        l = basic_conv_block(int(a*32), (3, 3), stride=2, dropout=0.25, activation="ReLU6", name="layer_0")
+        model.add(l)
+
+        # los bloques de bottleneck intermedios
+        crearBloques2(32, 1, a*16, 1, 1)
+        crearBloques2(16, 6, a*24, 2, 2)
+        crearBloques2(24, 6, a*32, 3, 2)
+        crearBloques2(32, 6, a*64, 4, 2)
+        crearBloques2(69, 6, a*96, 3, 1)
+        crearBloques2(96, 6, a*160, 3, 2)
+        crearBloques2(160, 6, a*320, 1, 1)
+
+        # ultima convolucion
+        l = pwise_conv_block(int(a*1280), dropout=0.25, activation="ReLU6",
+                name="layer_conv1x1")
+        model.add(l)
+
+
+        # Average Pooling y Fully Connected
+        model.add(layers.AveragePooling2D(pool_size=(7,7), strides=(1,1)))
+        model.add(layers.Flatten())
+        model.add(layers.Dense(1280))
+        model.add(layers.Dropout(0.5, name="dropout"))
+        model.add(layers.Dense(classes))
+        model.add(layers.Activation("softmax"))
+
+        return model
+
     #
     # Args:
     #   classes: el numero de classes que realizara predicciones
@@ -43,8 +89,9 @@ class MobileNetV2(Model):
 
 
         # Average Pooling y Fully Connected
-        self.m_layers.add(layers.AveragePooling2D(pool_size=(7,7), strides=(1,1)))
-        self.m_layers.add(layers.Flatten())
+        self.m_layers.add(layers.AveragePooling2D(pool_size=(7,7),
+            strides=(1,1)), training_arg=False)
+        self.m_layers.add(layers.Flatten(), training_arg=False)
         self.m_layers.add(layers.Dense(1280))
         self.m_layers.add(layers.Dropout(0.5, name="dropout"), only_training=True)
         self.m_layers.add(layers.Dense(classes))
