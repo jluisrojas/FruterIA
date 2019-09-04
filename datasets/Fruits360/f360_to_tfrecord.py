@@ -21,14 +21,13 @@ def main():
 
     # Writer al tfrecord
     train_writer = tf.io.TFRecordWriter("f360_train.tfrecord")
-    test_writer = tf.io.TFRecordWriter("f369_test.tfrecord")
+    test_writer = tf.io.TFRecordWriter("f360_test.tfrecord")
 
     # funcion que escribe una imagen al tfrecord
     def encode_image_info(image, category, writer):
         # Convierte la imagen a un tensor y lo normaliza 
         image_tensor = tf.convert_to_tensor(image)
         image_tensor /= 255
-        print(image_tensor)
 
         category = tf.one_hot([onehot_dict[category]], onehot_depth)
 
@@ -58,13 +57,13 @@ def main():
                 n_test = len(test_img_path)
 
             # escribe training images
-            for i in range(2): #(n_train):
+            for i in range(n_train):
                 img_path = train_img_path[i]
                 image = cv2.imread(img_path)
                 encode_image_info(image, cat, train_writer)
 
             # escribe test images
-            for j in range(2): #(n_test)
+            for j in range(n_test):
                 img_path = test_img_path[j]
                 image = cv2.imread(img_path)
                 encode_image_info(image, cat, test_writer)
