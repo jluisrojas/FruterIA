@@ -1,6 +1,7 @@
 # Igonarar todos los .DS_Store
 *.DS_Store
 *.swp
+*.tfrecord
 
 # Ignorar ciertas carpetas de datasets
 datasets/101_ObjectCategories/
