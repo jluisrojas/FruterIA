@@ -10,3 +10,4 @@ datasets/coco/cocofruits.tfrecord
 datasets/Fruits360/test/
 datasets/Fruits360/test-multiple-fruits/
 datasets/Fruits360/training/
+trained_models/

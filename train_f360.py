@@ -2,17 +2,15 @@ import os
 import shutil
 from os import path
 import json
+
 import tensorflow as tf
-import numpy as np
-from tensorflow.keras.models import Sequential
 import cv2
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
+import numpy as np
 
 # Importa cosas de Keras API
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import CSVLogger, TensorBoard
+from tensorflow.keras.models import Sequential
 
 # Importa datasets
 from datasets.Fruits360.f360_load_dataset import load_dataset
@@ -22,6 +20,10 @@ from datasets.mnist.mnist_dataset import load_mnist_dataset_resize, load_mnist_d
 from models.mobilenetv2 import MobileNetV2
 from models.test_models import mnist_model
 
+# Importa cosas para graficar el entrenameinto
+from training_utils.training_graphs import graph_confusion_matrix
+from training_utils.training_graphs import graph_model_metrics
+
 def main():
     train_mnist()
 
@@ -29,11 +31,13 @@ def train_setup():
     setup = {
         "path": "trained_models/mnist_test/",
         "num_classes": 5,
-        "epochs": 10,
+        "classes": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+        "epochs": 1,
         "batch_size": 128,
         "loss": "categorical_crossentropy",
         "metrics": ["accuracy"],
-        "learning_rate": 0.001
+        "learning_rate": 0.001,
+        "seed": 123321
     }
 
     return setup
@@ -63,7 +67,7 @@ def continue_training(path_to_model, dataset):
 
     fit_model(compiled_model=model, dataset=dataset, opt=opt,
             epochs=setup["epochs"], initial_epoch=state["epoch"],
-            path=setup["path"], continue_train=True)
+            path=setup["path"], continue_train=True, classes=setup["classes"])
 
 def train_model(setup, model, dataset):
     # Asegura que el path sea el correcto
@@ -93,7 +97,7 @@ def train_model(setup, model, dataset):
     model.compile(loss=setup["loss"], optimizer=opt, metrics=setup["metrics"])
 
     fit_model(compiled_model=model, dataset=dataset, opt=opt, 
-            epochs=setup["epochs"], path=setup["path"])
+            epochs=setup["epochs"], path=setup["path"], classes=setup["classes"])
 
 
 # el modelo debe de estar compilado
@@ -103,7 +107,8 @@ def fit_model(compiled_model=None,
         epochs=None,
         initial_epoch=0,
         path=None, 
-        continue_train=False):
+        continue_train=False,
+        classes=None):
     # obtiene el dataset
     train, test = dataset
 
@@ -126,9 +131,14 @@ def fit_model(compiled_model=None,
     compiled_model.save(path + "model.h5")
 
     # Crea grafica del entrenamiento
-    graph_model_metrics(history, epochs, path + "grafica.jpg")
+    graph_model_metrics(csv_path=path+"training_log.csv",
+            img_path="metrics_graph.png")
 
     # Crea confusion matrix
+    print("[INFO] Creando matriz de confusion")
+    classes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    graph_confusion_matrix(model=compiled_model, test_dataset=test, 
+            classes=classes, path=path+"confusion_matrix.png")
 
 
 class TrainingCheckPoints(tf.keras.callbacks.Callback):
@@ -163,7 +173,7 @@ class TrainingCheckPoints(tf.keras.callbacks.Callback):
         # Guarda el estado actual de entrenamiento, por si se quiere continuar
         training_state = {
             "learning_rate": float(tf.keras.backend.get_value(self.model.optimizer.lr)),
-            "epoch": epoch
+            "epoch": self.checkpoint_num
         }
 
         with open(self.folder_path+"training_state.json", "w") as writer:
@@ -171,6 +181,8 @@ class TrainingCheckPoints(tf.keras.callbacks.Callback):
 
 def train_mnist():
     setup = train_setup()
+    tf.random.set_seed(setup["seed"])
+    np.random.seed(setup["seed"])
 
     #train, test = load_mnist_dataset_resize(224)
     train, test = load_mnist_dataset()
@@ -182,62 +194,9 @@ def train_mnist():
     #model = tf.keras.applications.MobileNetV2(include_top=True,
     #        weights=None,classes=10, input_shape=(224, 224, 1))
 
-    #train_model(setup, model, (train, test))
-    continue_training("trained_models/mnist_test/", (train, test))
+    train_model(setup, model, (train, test))
+    #continue_training("trained_models/mnist_test/", (train, test))
 
 
-
-def graph_model_metrics(H, num_epochs, path):
-
-    # plot the training loss and accuracy
-    N = num_epochs
-    plt.style.use("ggplot")
-    plt.figure()
-    plt.plot(np.arange(0, N), H.history["loss"], label="train_loss")
-    plt.plot(np.arange(0, N), H.history["val_loss"], label="val_loss")
-    plt.plot(np.arange(0, N), H.history["accuracy"], label="train_acc")
-    plt.plot(np.arange(0, N), H.history["val_accuracy"], label="val_acc")
-    plt.title("Training Loss and Accuracy on Dataset")
-    plt.xlabel("Epoch #")
-    plt.ylabel("Loss/Accuracy")
-    plt.legend(loc="lower left")
-    plt.savefig(path)
-
-"""
-def train_model_f360():
-    print("[INFO] Loading dataset")
-    train, test = load_dataset("datasets/Fruits360/")
-
-    # Cambia el tamano de la datset
-    def _resize_dataset(x, y):
-        x.set_shape([100, 100, 3]) # Estas especificando que realmente el shape
-        y.set_shape([1, num_classes])
-        y = tf.reshape(y, [-1])
-        x = tf.image.resize(x, [224, 224])
-
-        return x, y
-
-    train = train.map(_resize_dataset)
-    test = test.map(_resize_dataset)
-
-    train = train.shuffle(buffer_size=492).batch(batch_size)
-    test = test.batch(batch_size)
-
-    print("[INFO] Compiling model")
-    
-    #model = MobileNetV2.build_model(num_classes)
-    model = tf.keras.applications.MobileNetV2(weights=None, include_top=True, classes=3)
-
-    
-    opt = Adam(lr=3e-4, decay=1e-4 / epochs)
-    model.compile(loss="categorical_crossentropy", optimizer=opt,
-            metrics=["accuracy"])
-
-    history = model.fit(train, epochs=epochs, validation_data=test)
-    graph_model_metrics(history)
-
-    print("[INFO] Serializing network...")
-    model.save("f360.model")
-"""
 
 main()
