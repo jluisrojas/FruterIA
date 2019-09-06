@@ -11,7 +11,7 @@ test_path = "f360_test.tfrecord"
 # Returns:
 #   train_data: Dataset de entrenameinto
 #   test_data: Dataset de pruebas
-def load_dataset(path=None):
+def load_dataset(path=None, resize=None):
     if path == None:
         path = ""
 
@@ -27,6 +27,7 @@ def load_dataset(path=None):
         ex = tf.io.parse_single_example(example, _format)
         x = tf.io.parse_tensor(ex["x"], tf.float32)
         y = tf.io.parse_tensor(ex["y"], tf.float32)
+        y = tf.reshape(y, [-1])
 
         data_dict = {
             "x": x,
@@ -37,5 +38,14 @@ def load_dataset(path=None):
 
     train_data = train_raw_data.map(_parse_example)
     test_data = test_raw_data.map(_parse_example)
+
+    if resize != None:
+        def _resize_dataset(x, y):
+            x = tf.image.resize(x, [resize, resize])
+
+            return x, y
+
+        train_data = train_data.map(_resize_dataset)
+        test_data = test_data.map(_resize_dataset)
 
     return train_data, test_data
