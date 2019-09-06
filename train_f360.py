@@ -1,4 +1,5 @@
 import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # ERROR
 import shutil
 from os import path
 import json
@@ -11,6 +12,7 @@ import numpy as np
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import CSVLogger, TensorBoard
 from tensorflow.keras.models import Sequential
+from tensorflow.keras.utils import plot_model
 
 # Importa datasets
 from datasets.Fruits360.f360_load_dataset import load_dataset
@@ -29,10 +31,11 @@ def main():
 
 def train_setup():
     setup = {
-        "path": "trained_models/mnist_test/",
-        "num_classes": 5,
+        "info": "Entrenada con una red simple, prueba sin validation dataset",
+        "path": "trained_models/mnist_test_00/",
+        "num_classes": 20,
         "classes": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-        "epochs": 1,
+        "epochs": 20,
         "batch_size": 128,
         "loss": "categorical_crossentropy",
         "metrics": ["accuracy"],
@@ -90,6 +93,10 @@ def train_model(setup, model, dataset):
     with open(setup["path"]+"setup.json", "w") as writer:
         json.dump(setup, writer, indent=4)
 
+    # Dibuja la arquitectura del modelo
+    plot_model(model, to_file=setup["path"]+"model_architecture.png",
+            show_shapes=True, show_layer_names=True, expand_nested=True)
+
     # Crea optimizador, por defecto Adam
     opt = Adam(lr=setup["learning_rate"])
 
@@ -131,14 +138,15 @@ def fit_model(compiled_model=None,
     compiled_model.save(path + "model.h5")
 
     # Crea grafica del entrenamiento
-    graph_model_metrics(csv_path=path+"training_log.csv",
-            img_path="metrics_graph.png")
+    #graph_model_metrics(csv_path=path+"training_log.csv",
+    #        img_path=path+"metrics_graph.png")
 
     # Crea confusion matrix
     print("[INFO] Creando matriz de confusion")
     classes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-    graph_confusion_matrix(model=compiled_model, test_dataset=test, 
-            classes=classes, path=path+"confusion_matrix.png")
+    if test != None:
+        graph_confusion_matrix(model=compiled_model, test_dataset=test, 
+                classes=classes, path=path+"confusion_matrix.png")
 
 
 class TrainingCheckPoints(tf.keras.callbacks.Callback):
@@ -194,7 +202,7 @@ def train_mnist():
     #model = tf.keras.applications.MobileNetV2(include_top=True,
     #        weights=None,classes=10, input_shape=(224, 224, 1))
 
-    train_model(setup, model, (train, test))
+    train_model(setup, model, (train, None))
     #continue_training("trained_models/mnist_test/", (train, test))
 
 

@@ -13,7 +13,9 @@ def graph_confusion_matrix(model=None, test_dataset=None, classes=None, path=Non
 
     y_predict = None
     for x, y in test_unbatch:
-        temp = model.predict(tf.expand_dims(x, 0))
+        x_e = tf.expand_dims(x, 0)
+        x_e = tf.cast(x_e, tf.float32)
+        temp = model.predict(x_e)
         temp = tf.expand_dims(tf.argmax(temp, axis=-1), axis=0)
         if isinstance(y_predict, tf.Tensor):
             y_predict = tf.concat([y_predict, temp], 0)
@@ -44,6 +46,7 @@ def graph_confusion_matrix(model=None, test_dataset=None, classes=None, path=Non
 
 def graph_model_metrics(csv_path=None, img_path=None):
     data = pd.read_csv(csv_path)
+    data = data.loc[:, data.sub(data["epoch"], axis=0)]
     figure = plt.figure()
     data.plot()
     plt.savefig(img_path)
