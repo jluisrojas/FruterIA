@@ -1,5 +1,5 @@
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # ERROR
+#os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # ERROR
 import shutil
 from os import path
 import json
@@ -10,32 +10,36 @@ import numpy as np
 
 # Importa cosas de Keras API
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.callbacks import CSVLogger, TensorBoard
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.utils import plot_model
 
 # Importa datasets
-from datasets.Fruits360.f360_load_dataset import load_dataset
+from datasets.Fruits360.f360_load_dataset import load_dataset as load_f360_dataset
 from datasets.mnist.mnist_dataset import load_mnist_dataset_resize, load_mnist_dataset
 
 # Importa modelos
 from models.mobilenetv2 import MobileNetV2
 from models.test_models import mnist_model
 
+# Importa callbacks del modelo
+from training_utils.callbacks import TrainingCheckPoints
+from tensorflow.keras.callbacks import CSVLogger, TensorBoard
+
 # Importa cosas para graficar el entrenameinto
 from training_utils.training_graphs import graph_confusion_matrix
 from training_utils.training_graphs import graph_model_metrics
 
 def main():
-    train_mnist()
+    train_f360()
+    #train_mnist()
 
 def train_setup():
     setup = {
-        "info": "Entrenada con una red simple, prueba sin validation dataset",
-        "path": "trained_models/mnist_test_00/",
-        "num_classes": 20,
+        "info": "Entrenando con MobilenetV2 y weights en None",
+        "path": "trained_models/mnist_test_02/",
+        "num_classes": 10,
         "classes": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-        "epochs": 20,
+        "epochs": 50,
         "batch_size": 128,
         "loss": "categorical_crossentropy",
         "metrics": ["accuracy"],
@@ -142,50 +146,18 @@ def fit_model(compiled_model=None,
     #        img_path=path+"metrics_graph.png")
 
     # Crea confusion matrix
-    print("[INFO] Creando matriz de confusion")
-    classes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
     if test != None:
+        print("[INFO] Creando matriz de confusion")
         graph_confusion_matrix(model=compiled_model, test_dataset=test, 
                 classes=classes, path=path+"confusion_matrix.png")
 
+def train_f360():
+    setup = train_setup()
+    tf.random.set_seed(setup["seed"])
+    np.random.seed(setup["seed"])
 
-class TrainingCheckPoints(tf.keras.callbacks.Callback):
-    def __init__(self, folder_path, relative_epoch=0):
-        super(TrainingCheckPoints, self).__init__()
+    train, test = load_f360_dataset(path="datasets/Fruits360/", resize=224)
 
-        self.folder_path = folder_path
-        self.relative_epoch = relative_epoch
-
-    def on_train_begin(self, logs=None):
-        self.best_loss = np.Inf
-        self.checkpoint_num = self.relative_epoch
-
-    def on_epoch_end(self, epoch, logs=None):
-        # Verifica que el modelo tenga learning rate
-        if not hasattr(self.model.optimizer, 'lr'):
-            raise ValueError('Optimizer must have a "lr" attribute.')
-
-        # Checa si mejoro el loss para hacer un checkpoint
-        current_loss = logs.get("loss")
-        if current_loss < self.best_loss:
-            print("[TRAINING] Creating model checkpoint.")
-
-            self.model.save(self.folder_path+"model_checkpoint_{}.h5".format(self.checkpoint_num))
-
-            if self.checkpoint_num > 0:
-                os.remove(self.folder_path+"model_checkpoint_{}.h5".format(self.checkpoint_num-1))
-
-            self.checkpoint_num += 1
-            self.best_loss = current_loss
-        
-        # Guarda el estado actual de entrenamiento, por si se quiere continuar
-        training_state = {
-            "learning_rate": float(tf.keras.backend.get_value(self.model.optimizer.lr)),
-            "epoch": self.checkpoint_num
-        }
-
-        with open(self.folder_path+"training_state.json", "w") as writer:
-            json.dump(training_state, writer, indent=4)
 
 def train_mnist():
     setup = train_setup()
@@ -194,16 +166,23 @@ def train_mnist():
 
     #train, test = load_mnist_dataset_resize(224)
     train, test = load_mnist_dataset()
+
+    def _resize_images(x, y):
+        x = tf.image.resize(x, [224, 224])
+        return x, y
+
+    train = train.map(_resize_images)
+    test = test.map(_resize_images)
     
-    train = train.shuffle(456).batch(setup["batch_size"])
-    test = test.batch(setup["batch_size"])
+    train = train.shuffle(456).take(10000).batch(setup["batch_size"])
+    test = test.shuffle(500).take(1000).batch(setup["batch_size"])
 
-    model = mnist_model()
-    #model = tf.keras.applications.MobileNetV2(include_top=True,
-    #        weights=None,classes=10, input_shape=(224, 224, 1))
+    #model = mnist_model()
+    model = tf.keras.applications.MobileNetV2(include_top=True,
+            weights=None,classes=10, input_shape=(224, 224, 1))
 
-    train_model(setup, model, (train, None))
-    #continue_training("trained_models/mnist_test/", (train, test))
+    #train_model(setup, model, (train, test))
+    continue_training("trained_models/mnist_test_02/", (train, test))
 
 
 
