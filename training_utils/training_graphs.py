@@ -46,7 +46,7 @@ def graph_confusion_matrix(model=None, test_dataset=None, classes=None, path=Non
 
 def graph_model_metrics(csv_path=None, img_path=None):
     data = pd.read_csv(csv_path)
-    data = data.loc[:, data.sub(data["epoch"], axis=0)]
+    data = data.drop(columns=["epoch"])
     figure = plt.figure()
     data.plot()
     plt.savefig(img_path)

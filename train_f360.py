@@ -9,7 +9,7 @@ import cv2
 import numpy as np
 
 # Importa cosas de Keras API
-from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.optimizers import Adam, RMSprop
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.utils import plot_model
 
@@ -20,6 +20,7 @@ from datasets.mnist.mnist_dataset import load_mnist_dataset_resize, load_mnist_d
 # Importa modelos
 from models.mobilenetv2 import MobileNetV2
 from models.test_models import mnist_model
+from models.smallervggnet import SmallerVGGNet
 
 # Importa callbacks del modelo
 from training_utils.callbacks import TrainingCheckPoints
@@ -32,6 +33,23 @@ from training_utils.training_graphs import graph_model_metrics
 def main():
     train_f360()
     #train_mnist()
+
+def f360_train_setup():
+    setup = {
+        "info": "Entrenando Fruits 360 dataset con MobileNetV2 y RMSprop, los weights inicializados con los de imagenet e input shape de [96, 96, 3], con toda la red entrenable",
+        "path": "trained_models/f360_MobileNetV2_04/",
+        "num_classes": 3,
+        "classes": ["Apple Golden 1", "Banana", "Orange"],
+        "input_shape": (96, 96, 3),
+        "epochs": 15,
+        "batch_size": 16,
+        "loss": "categorical_crossentropy",
+        "metrics": ["accuracy"],
+        "learning_rate": 0.0001,
+        "seed": 123321
+    }
+
+    return setup
 
 def train_setup():
     setup = {
@@ -63,6 +81,8 @@ def continue_training(path_to_model, dataset):
     state = None
     with open(path_to_model+"checkpoints/"+"training_state.json", "r") as data:
         state = json.load(data)
+
+    print("[INFO] Continuando entrenameinto de modelo.")
 
     # carga el modelo
     model_name = "model_checkpoint_{}.h5".format(state["epoch"]-1)
@@ -97,12 +117,15 @@ def train_model(setup, model, dataset):
     with open(setup["path"]+"setup.json", "w") as writer:
         json.dump(setup, writer, indent=4)
 
+    print("[INFO] Entrenando modelo.")
+
     # Dibuja la arquitectura del modelo
     plot_model(model, to_file=setup["path"]+"model_architecture.png",
-            show_shapes=True, show_layer_names=True, expand_nested=True)
+            show_shapes=True, show_layer_names=True, expand_nested=False)
 
     # Crea optimizador, por defecto Adam
-    opt = Adam(lr=setup["learning_rate"])
+    #opt = Adam(lr=setup["learning_rate"])
+    opt = RMSprop(lr=setup["learning_rate"])
 
     # Compila el modelo
     model.compile(loss=setup["loss"], optimizer=opt, metrics=setup["metrics"])
@@ -128,7 +151,7 @@ def fit_model(compiled_model=None,
     if initial_epoch >= 1:
         relative = initial_epoch
     callbacks = [
-        TrainingCheckPoints(path+"checkpoints/", relative_epoch=relative),
+        #TrainingCheckPoints(path+"checkpoints/", relative_epoch=relative),
         CSVLogger(path+"training_log.csv", append=continue_train),
         TensorBoard(log_dir=path+"logs")
     ]
@@ -142,8 +165,8 @@ def fit_model(compiled_model=None,
     compiled_model.save(path + "model.h5")
 
     # Crea grafica del entrenamiento
-    #graph_model_metrics(csv_path=path+"training_log.csv",
-    #        img_path=path+"metrics_graph.png")
+    graph_model_metrics(csv_path=path+"training_log.csv",
+            img_path=path+"metrics_graph.png")
 
     # Crea confusion matrix
     if test != None:
@@ -151,12 +174,48 @@ def fit_model(compiled_model=None,
         graph_confusion_matrix(model=compiled_model, test_dataset=test, 
                 classes=classes, path=path+"confusion_matrix.png")
 
+def load_model(path):
+    model = tf.keras.models.load_model(path + "model.h5")
+    with open(path + "setup.json", "r") as data:
+        setup = json.load(data)
+
+    return model, setup["classes"]
+
 def train_f360():
-    setup = train_setup()
+    setup = f360_train_setup()
     tf.random.set_seed(setup["seed"])
     np.random.seed(setup["seed"])
 
-    train, test = load_f360_dataset(path="datasets/Fruits360/", resize=224)
+    train, test = load_f360_dataset(path="datasets/Fruits360/", resize=96)
+
+    train = train.shuffle(492).batch(setup["batch_size"])
+    test = test.batch(setup["batch_size"])
+
+    #model = SmallerVGGNet.build(input_shape=(100, 100, 3), classes=3)
+    #model = tf.keras.applications.MobileNetV2(include_top=True,
+    #        weights="imagenet",classes=3, input_shape=(100, 100, 3))
+
+    model = mnv2_transfer_model(num_classes=3, input_shape=(96, 96, 3))
+
+    train_model(setup, model, (train, test))
+
+def mnv2_transfer_model(num_classes=None, input_shape=None):
+    base_model = tf.keras.applications.MobileNetV2(include_top=False,
+            weights="imagenet", input_shape=input_shape)
+    #base_model.trainable = False
+
+    global_average_layer = tf.keras.layers.GlobalAveragePooling2D(name="gap")
+    prediction_layer = tf.keras.layers.Dense(num_classes, name="dense")
+    activation_layer = tf.keras.layers.Activation("softmax", name="activation")
+    
+    model = tf.keras.Sequential([
+        base_model,
+        global_average_layer,
+        prediction_layer,
+        activation_layer])
+
+    return model
+
 
 
 def train_mnist():

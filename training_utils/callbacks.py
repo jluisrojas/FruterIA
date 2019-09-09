@@ -1,6 +1,8 @@
-import tensorflow as tf
 import os
 import json
+
+import tensorflow as tf
+import numpy as np
 
 class TrainingCheckPoints(tf.keras.callbacks.Callback):
     def __init__(self, folder_path, relative_epoch=0):

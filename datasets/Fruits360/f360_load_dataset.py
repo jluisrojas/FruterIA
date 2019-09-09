@@ -39,6 +39,14 @@ def load_dataset(path=None, resize=None):
     train_data = train_raw_data.map(_parse_example)
     test_data = test_raw_data.map(_parse_example)
 
+    def _set_dataset_shape(x, y):
+        x.set_shape([100, 100, 3])
+
+        return x, y
+
+    train_data = train_data.map(_set_dataset_shape)
+    test_data = test_data.map(_set_dataset_shape)
+
     if resize != None:
         def _resize_dataset(x, y):
             x = tf.image.resize(x, [resize, resize])
@@ -47,5 +55,6 @@ def load_dataset(path=None, resize=None):
 
         train_data = train_data.map(_resize_dataset)
         test_data = test_data.map(_resize_dataset)
+
 
     return train_data, test_data
