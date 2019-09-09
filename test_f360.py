@@ -27,6 +27,7 @@ def main():
         original_image = np.copy(image)
 
         image = tf.convert_to_tensor(image)
+        image /= 255
         image = tf.image.resize(image, [w, h])
         image = tf.expand_dims(image, 0)
 
