@@ -7,9 +7,9 @@ import tensorflow as tf
 import numpy as np
 
 def main():
-    #path_to_model = "trained_models/f360_VGG_01/"
-    path_to_model = "trained_models/f360_MobileNetV2_04/"
-    path_to_imgs = "datasets/tests/"
+    path_to_model = "trained_models/f360_vgg_01/"
+    #path_to_model = "trained_models/f360_MobileNetV2_04/"
+    path_to_imgs = "datasets/test-f360-coco-crop/"
 
     with open(path_to_model+"setup.json", "r") as data:
         setup = json.load(data)
@@ -32,6 +32,8 @@ def main():
         image = tf.expand_dims(image, 0)
 
         prediction = model.predict(image)
+        prediction *= 100.0
+        prediction = tf.cast(prediction, tf.int8)
         print(prediction)
         index = tf.math.argmax(prediction, axis=1)
         index = tf.keras.backend.get_value(index)[0]
