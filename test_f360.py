@@ -7,8 +7,8 @@ import tensorflow as tf
 import numpy as np
 
 def main():
-    path_to_model = "trained_models/f360_vgg_01/"
-    #path_to_model = "trained_models/f360_MobileNetV2_04/"
+    #path_to_model = "trained_models/f360_vgg_01/"
+    path_to_model = "trained_models/f360_MobileNetV2_05/"
     path_to_imgs = "datasets/test-f360-coco-crop/"
 
     with open(path_to_model+"setup.json", "r") as data:

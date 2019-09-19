@@ -28,32 +28,22 @@ def main():
 
 def f360_train_setup():
     setup = {
-        "info": "Entrenando Fruits 360 dataset con SmallerVGGNet y RMSprop, input shape de [100, 100, 3]",
-        "path": "trained_models/f360_VGG_02/",
-        "num_classes": 3,
-        "classes": ["Apple Golden 1", "Banana", "Orange"],
-        "input_shape": (100, 100, 3),
+        "info": """Entrenando Fruits 360 dataset con MobileNetV2 con weights de imagnet y RMSprop, 
+        input shape de [96, 96, 3], las primeras 100 capas no se entrenan. Se
+        estan utilizando mas categiras con el proposito de ver si hay mejora en
+        el dataset de coco""",
+
+        "path": "trained_models/f360_MobileNetV2_06/",
+        "num_classes": 16,
+        "classes": ["Apple Braeburn", "Apple Golden 1", "Avocado", "Lemon",
+            "Limes", "Lychee", "Mandarine", "Banana", "Onion White", "Onion White",
+            "Pear", "Orange", "Pineapple", "Potato White", "Strawberry", "Tomato 4"],
+        "input_shape": (96, 96, 3),
         "epochs": 20,
-        "batch_size": 16,
+        "batch_size": 32,
         "loss": "categorical_crossentropy",
         "metrics": ["accuracy"],
         "learning_rate": 0.0001,
-        "seed": 123321
-    }
-
-    return setup
-
-def train_setup():
-    setup = {
-        "info": "Entrenando con MobilenetV2 y weights en None",
-        "path": "trained_models/mnist_test_02/",
-        "num_classes": 10,
-        "classes": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-        "epochs": 50,
-        "batch_size": 128,
-        "loss": "categorical_crossentropy",
-        "metrics": ["accuracy"],
-        "learning_rate": 0.001,
         "seed": 123321
     }
 
@@ -66,28 +56,34 @@ def train_f360():
 
     w, h, _ = setup["input_shape"]
 
-    train, test = load_f360_dataset(path="datasets/Fruits360/", resize=w)
+    train, test = load_f360_dataset(path="datasets/Fruits360/", resize=w,
+            num_classes=setup["num_classes"])
 
     train = train.shuffle(492).batch(setup["batch_size"])
     test = test.batch(setup["batch_size"])
 
-    model = SmallerVGGNet.build(input_shape=(100, 100, 3), classes=3)
+    #model = SmallerVGGNet.build(input_shape=(100, 100, 3), classes=3)
     #model = tf.keras.applications.MobileNetV2(include_top=True,
     #        weights="imagenet",classes=3, input_shape=(100, 100, 3))
 
-    #model = mnv2_transfer_model(num_classes=3, input_shape=(96, 96, 3))
+    model = mnv2_transfer_model(num_classes=3, input_shape=(96, 96, 3))
+    #model = mnv2_finetune_model(num_classes=3, input_shape=(96, 96, 3))
 
     train_model(setup, model, (train, test))
 
 def mnv2_transfer_model(num_classes=None, input_shape=None):
+    # Obtiene el modelo base que proporciona keras
+    # este no incluye el top, porque es custom
     base_model = tf.keras.applications.MobileNetV2(include_top=False,
             weights="imagenet", input_shape=input_shape)
-    #base_model.trainable = False
+    base_model.trainable = True
 
+    # Agrega un classficador al final del modelo
     global_average_layer = tf.keras.layers.GlobalAveragePooling2D(name="gap")
     prediction_layer = tf.keras.layers.Dense(num_classes, name="dense")
     activation_layer = tf.keras.layers.Activation("softmax", name="activation")
 
+    # Crea un nuevo modelo con el base_model y clasficador
     model = tf.keras.Sequential([
         base_model,
         global_average_layer,
@@ -96,33 +92,15 @@ def mnv2_transfer_model(num_classes=None, input_shape=None):
 
     return model
 
+def mnv2_finetune_model(num_classes=None, input_shape=None):
+    # Obtiene el modelo de MobileNetV2 con transfer learning
+    base_model = mnv2_transfer_model(num_classes=num_classes, input_shape=input_shape)
+    # El numero de layers que se van a congelar
+    fine_tune_at = 50
 
+    for layer in base_model.layers[:fine_tune_at]:
+        layer.trainable = False
 
-def train_mnist():
-    setup = train_setup()
-    tf.random.set_seed(setup["seed"])
-    np.random.seed(setup["seed"])
-
-    #train, test = load_mnist_dataset_resize(224)
-    train, test = load_mnist_dataset()
-
-    def _resize_images(x, y):
-        x = tf.image.resize(x, [224, 224])
-        return x, y
-
-    train = train.map(_resize_images)
-    test = test.map(_resize_images)
-
-    train = train.shuffle(456).take(10000).batch(setup["batch_size"])
-    test = test.shuffle(500).take(1000).batch(setup["batch_size"])
-
-    #model = mnist_model()
-    model = tf.keras.applications.MobileNetV2(include_top=True,
-            weights=None,classes=10, input_shape=(224, 224, 1))
-
-    #train_model(setup, model, (train, test))
-    continue_training("trained_models/mnist_test_02/", (train, test))
-
-
+    return base_model
 
 main()

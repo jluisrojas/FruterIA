@@ -11,7 +11,7 @@ test_path = "f360_test.tfrecord"
 # Returns:
 #   train_data: Dataset de entrenameinto
 #   test_data: Dataset de pruebas
-def load_dataset(path=None, resize=None):
+def load_dataset(path=None, resize=None, num_classes=None):
     if path == None:
         path = ""
 

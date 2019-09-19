@@ -8,7 +8,10 @@ training_path = "training/"
 test_path = "test/"
 num_imgs = -1 # -1 es para todas
 
-process_cats = ["Apple Golden 1", "Banana", "Orange"]
+#process_cats = ["Apple Golden 1", "Banana", "Orange"]
+process_cats = ["Apple Braeburn", "Apple Golden 1", "Avocado", "Lemon",
+    "Limes", "Lychee", "Mandarine", "Banana", "Onion White", "Onion White",
+    "Pear", "Orange", "Pineapple", "Potato White", "Strawberry", "Tomato 4"]
 onehot_depth = len(process_cats)
 onehot_dict = { }
 for i in range(len(process_cats)):
