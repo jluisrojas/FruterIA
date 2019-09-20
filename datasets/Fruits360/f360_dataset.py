@@ -82,10 +82,12 @@ def f360_create_dataset(training_path=None, test_path=None, num_imgs=-1,
     if not path.exists(result_path):
         os.makedirs(result_path)
 
-    #process_cats = ["Apple Golden 1", "Banana", "Orange"]
+    process_cats = ["Apple Golden 1", "Banana", "Orange"]
+    """
     process_cats = ["Apple Braeburn", "Apple Golden 1", "Avocado", "Lemon",
         "Limes", "Lychee", "Mandarine", "Banana", "Onion White", "Onion White",
         "Pear", "Orange", "Pineapple", "Potato White", "Strawberry", "Tomato 4"]
+    """
 
     onehot_depth = len(process_cats)
     onehot_dict = { }
@@ -102,6 +104,7 @@ def f360_create_dataset(training_path=None, test_path=None, num_imgs=-1,
 
     train_size = 0
     test_size = 0
+    categories_size = { }
 
     # funcion que escribe una imagen al tfrecord
     def encode_image_info(image, category, writer):
@@ -136,6 +139,8 @@ def f360_create_dataset(training_path=None, test_path=None, num_imgs=-1,
                 n_train = len(train_img_path)
                 n_test = len(test_img_path)
 
+            categories_size[cat] = (n_train, n_test)
+
             # escribe training images
             for i in range(n_train):
                 img_path = train_img_path[i]
@@ -158,7 +163,8 @@ def f360_create_dataset(training_path=None, test_path=None, num_imgs=-1,
         "num_classes": len(process_cats),
         "categories": process_cats,
         "train_size": train_size,
-        "test_size": test_size
+        "test_size": test_size,
+        "categories_size": categories_size
     }
 
     # Escribe el info del dataset

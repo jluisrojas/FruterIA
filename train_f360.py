@@ -34,17 +34,16 @@ def f360_train_setup():
         el dataset de coco""",
 
         "path": "trained_models/f360_MobileNetV2_06/",
-        "num_classes": 16,
-        "classes": ["Apple Braeburn", "Apple Golden 1", "Avocado", "Lemon",
-            "Limes", "Lychee", "Mandarine", "Banana", "Onion White", "Onion White",
-            "Pear", "Orange", "Pineapple", "Potato White", "Strawberry", "Tomato 4"],
+        "num_classes": 0,
+        "classes": [],
         "input_shape": (96, 96, 3),
         "epochs": 10,
         "batch_size": 32,
         "loss": "categorical_crossentropy",
         "metrics": ["accuracy"],
         "learning_rate": 0.0001,
-        "seed": 123321
+        "seed": 123321,
+        "dataset_info": " "
     }
 
     return setup
@@ -64,6 +63,7 @@ def train_f360():
 
     setup["dataset_info"] = info
     setup["classes"] = info["categoires"]
+    setup["num_classes"] = info["num_classes"]
 
     #model = SmallerVGGNet.build(input_shape=(100, 100, 3), classes=3)
     #model = tf.keras.applications.MobileNetV2(include_top=True,

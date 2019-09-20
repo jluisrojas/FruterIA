@@ -19,6 +19,6 @@
         "Strawberry",
         "Tomato 4"
     ],
-    "train_size": 6295,
-    "test_size": 2113
+    "train_size": 7621,
+    "test_size": 2555
 }
