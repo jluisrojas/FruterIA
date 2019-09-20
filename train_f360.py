@@ -39,7 +39,7 @@ def f360_train_setup():
             "Limes", "Lychee", "Mandarine", "Banana", "Onion White", "Onion White",
             "Pear", "Orange", "Pineapple", "Potato White", "Strawberry", "Tomato 4"],
         "input_shape": (96, 96, 3),
-        "epochs": 20,
+        "epochs": 10,
         "batch_size": 32,
         "loss": "categorical_crossentropy",
         "metrics": ["accuracy"],
@@ -56,17 +56,21 @@ def train_f360():
 
     w, h, _ = setup["input_shape"]
 
-    train, test = load_f360_dataset(path="datasets/Fruits360/", resize=w,
+    train, test, info = load_f360_dataset(path="datasets/Fruits360/", resize=w,
             num_classes=setup["num_classes"])
 
     train = train.shuffle(492).batch(setup["batch_size"])
     test = test.batch(setup["batch_size"])
 
+    setup["dataset_info"] = info
+    setup["classes"] = info["categoires"]
+
     #model = SmallerVGGNet.build(input_shape=(100, 100, 3), classes=3)
     #model = tf.keras.applications.MobileNetV2(include_top=True,
     #        weights="imagenet",classes=3, input_shape=(100, 100, 3))
 
-    model = mnv2_transfer_model(num_classes=3, input_shape=(96, 96, 3))
+    model = mnv2_transfer_model(num_classes=setup["num_classes"],
+            input_shape=setup["input_shape"])
     #model = mnv2_finetune_model(num_classes=3, input_shape=(96, 96, 3))
 
     train_model(setup, model, (train, test))
@@ -98,6 +102,7 @@ def mnv2_finetune_model(num_classes=None, input_shape=None):
     # El numero de layers que se van a congelar
     fine_tune_at = 50
 
+    # Congela las layers
     for layer in base_model.layers[:fine_tune_at]:
         layer.trainable = False
 

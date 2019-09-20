@@ -1,0 +1,24 @@
+{
+    "name": "Fruits 360 dataset",
+    "num_classes": 16,
+    "categories": [
+        "Apple Braeburn",
+        "Apple Golden 1",
+        "Avocado",
+        "Lemon",
+        "Limes",
+        "Lychee",
+        "Mandarine",
+        "Banana",
+        "Onion White",
+        "Onion White",
+        "Pear",
+        "Orange",
+        "Pineapple",
+        "Potato White",
+        "Strawberry",
+        "Tomato 4"
+    ],
+    "train_size": 6295,
+    "test_size": 2113
+}
