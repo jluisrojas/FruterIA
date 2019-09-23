@@ -7,9 +7,9 @@ import tensorflow as tf
 import numpy as np
 
 def main():
-    #path_to_model = "trained_models/f360_vgg_01/"
-    path_to_model = "trained_models/f360_MobileNetV2_04/"
-    path_to_imgs = "datasets/test-f360-google2/"
+    path_to_model = "trained_models/f360_vgg_01/"
+    #path_to_model = "trained_models/f360_MobileNetV2_04/"
+    path_to_imgs = "datasets/test-f360-platanos/"
 
     with open(path_to_model+"setup.json", "r") as data:
         setup = json.load(data)
@@ -23,6 +23,8 @@ def main():
     _ = input("[INFO] Click to continue")
     #model = tf.keras.models.load_model(path_to_model+"checkpoints/model_checkpoint_5.h5")
     img_paths = glob.glob(path_to_imgs + "*")
+    img_paths = sorted(img_paths)
+    print(img_paths)
     
     for img_path in img_paths:
         image = cv2.imread(img_path)
