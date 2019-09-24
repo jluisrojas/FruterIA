@@ -5,6 +5,7 @@ import sys
 import os
 from os import path
 import json
+import random
 
 from datasets.datasets_features import bytes_feature
 
@@ -104,6 +105,9 @@ def f360_create_dataset(training_path=None, test_path=None, num_imgs=-1,
 
     train_size = 0
     test_size = 0
+    total_train_size = 0
+    total_test_size = 0
+
     categories_size = { }
 
     # funcion que escribe una imagen al tfrecord
@@ -129,9 +133,14 @@ def f360_create_dataset(training_path=None, test_path=None, num_imgs=-1,
         # si la categoria existe
         if cat in cats:
             print("[INFO] Writing {}...".format(cat))
+            train_size = test_size = 0
             # obtiene los paths
             train_img_path = glob(training_path+cat+"/*.jpg")
             test_img_path = glob(test_path+cat+"/*.jpg")
+
+            # Ordena los paths
+            train_img_path = sorted(train_img_path)
+            test_img_path = sorted(test_img_path)
 
             # el numero de imagenes a que se van a ciclar
             n_train = n_test = num_imgs
@@ -139,14 +148,24 @@ def f360_create_dataset(training_path=None, test_path=None, num_imgs=-1,
                 n_train = len(train_img_path)
                 n_test = len(test_img_path)
 
-            categories_size[cat] = (n_train, n_test)
 
+            i = 0
+            j = 0
             # escribe training images
+            """
             for i in range(n_train):
                 img_path = train_img_path[i]
                 image = cv2.imread(img_path)
                 encode_image_info(image, cat, train_writer)
                 train_size += 1
+            """
+            while i < n_train:
+                img_path = train_img_path[i]
+                image = cv2.imread(img_path)
+                encode_image_info(image, cat, train_writer)
+                train_size += 1
+                #i += random.randint(10, 20)
+                i += 2
 
             # escribe test images
             for j in range(n_test):
@@ -155,6 +174,11 @@ def f360_create_dataset(training_path=None, test_path=None, num_imgs=-1,
                 encode_image_info(image, cat, test_writer)
                 test_size += 1
 
+            categories_size[cat] = (train_size, test_size)
+
+            total_train_size += train_size
+            total_test_size += test_size
+
     train_writer.close()
     test_writer.close()
 
@@ -162,8 +186,8 @@ def f360_create_dataset(training_path=None, test_path=None, num_imgs=-1,
         "name": "Fruits 360 dataset",
         "num_classes": len(process_cats),
         "categories": process_cats,
-        "train_size": train_size,
-        "test_size": test_size,
+        "train_size": total_train_size,
+        "test_size": total_test_size,
         "categories_size": categories_size
     }
 

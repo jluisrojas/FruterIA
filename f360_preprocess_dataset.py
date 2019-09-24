@@ -5,7 +5,7 @@ def main():
     # Inicializa los paths
     training_path = "datasets/Fruits360/training/"
     test_path = "datasets/Fruits360/test/"
-    result_path = "datasets/Fruits360/F360-3/"
+    result_path = "datasets/Fruits360/F360-3-full/"
 
     print("[INFO] Creating Fruits 360 Dataset")
     # Crea el dataset

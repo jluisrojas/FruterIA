@@ -9,7 +9,7 @@ import cv2
 import numpy as np
 
 # Importa datasets
-from datasets.Fruits360.f360_load_dataset import load_dataset as load_f360_dataset
+from datasets.Fruits360.f360_dataset import f360_load_dataset
 from datasets.mnist.mnist_dataset import load_mnist_dataset_resize, load_mnist_dataset
 
 # Importa modelos
@@ -29,15 +29,15 @@ def main():
 def f360_train_setup():
     setup = {
         "info": """Entrenando Fruits 360 dataset con MobileNetV2 con weights de imagnet y RMSprop, 
-        input shape de [96, 96, 3], las primeras 100 capas no se entrenan. Se
-        estan utilizando mas categiras con el proposito de ver si hay mejora en
-        el dataset de coco""",
+        input shape de [96, 96, 3], se esta entrenando el modelo completo. El
+        dataset es un subdataset del dataset completo""",
 
-        "path": "trained_models/f360_MobileNetV2_06/",
+        "path": "trained_models/f360_MobileNetV2_d05/",
+        "dataset_path": "datasets/Fruits360/F360-3-98/",
         "num_classes": 0,
         "classes": [],
         "input_shape": (96, 96, 3),
-        "epochs": 10,
+        "epochs": 200,
         "batch_size": 32,
         "loss": "categorical_crossentropy",
         "metrics": ["accuracy"],
@@ -55,14 +55,14 @@ def train_f360():
 
     w, h, _ = setup["input_shape"]
 
-    train, test, info = load_f360_dataset(path="datasets/Fruits360/", resize=w,
+    train, test, info = f360_load_dataset(path=setup["dataset_path"], resize=w,
             num_classes=setup["num_classes"])
 
-    train = train.shuffle(492).batch(setup["batch_size"])
+    train = train.shuffle(int(info["train_size"] / info["num_classes"])).batch(setup["batch_size"])
     test = test.batch(setup["batch_size"])
 
     setup["dataset_info"] = info
-    setup["classes"] = info["categoires"]
+    setup["classes"] = info["categories"]
     setup["num_classes"] = info["num_classes"]
 
     #model = SmallerVGGNet.build(input_shape=(100, 100, 3), classes=3)

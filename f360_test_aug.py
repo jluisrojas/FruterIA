@@ -17,11 +17,11 @@ def main():
         train = train.skip(train_size)
 
     for dataset in datasets_cats:
-        for x, y in dataset.take(5):
+        for x, y in dataset:
             plot_image(x)
             x, _ = color_aug(x, y)
             x, _ = expand_image(x, y)
             x, _ = random_flip(x, y)
-            plot_image(x)
+            #plot_image(x)
 
 main()
