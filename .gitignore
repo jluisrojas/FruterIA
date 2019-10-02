@@ -10,4 +10,7 @@ datasets/coco/cocofruits.tfrecord
 datasets/Fruits360/test/
 datasets/Fruits360/test-multiple-fruits/
 datasets/Fruits360/training/
+datasets/Fruits360/F360-3-Custom/test/
+datasets/Fruits360/F360-3-Custom/training/
 trained_models/
+.ipynb_checkpoints/

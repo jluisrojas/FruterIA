@@ -3,9 +3,9 @@ from datasets.Fruits360.f360_dataset import f360_create_dataset
 
 def main():
     # Inicializa los paths
-    training_path = "datasets/Fruits360/training/"
-    test_path = "datasets/Fruits360/test/"
-    result_path = "datasets/Fruits360/F360-3-full/"
+    training_path = "datasets/Fruits360/F360-3-Custom/training/"
+    test_path = "datasets/Fruits360/F360-3-Custom/test/"
+    result_path = "datasets/Fruits360/F360-3-Custom/"
 
     print("[INFO] Creating Fruits 360 Dataset")
     # Crea el dataset

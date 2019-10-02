@@ -32,13 +32,13 @@ def f360_train_setup():
         input shape de [96, 96, 3], se esta entrenando el modelo completo. El
         dataset es un subdataset del dataset completo""",
 
-        "path": "trained_models/f360_MobileNetV2_d05/",
-        "dataset_path": "datasets/Fruits360/F360-3-98/",
+        "path": "trained_models/f360_MobileNetV2_d07/",
+        "dataset_path": "datasets/Fruits360/F360-3-Custom/",
         "num_classes": 0,
         "classes": [],
         "input_shape": (96, 96, 3),
-        "epochs": 200,
-        "batch_size": 32,
+        "epochs": 400,
+        "batch_size": 1,
         "loss": "categorical_crossentropy",
         "metrics": ["accuracy"],
         "learning_rate": 0.0001,
