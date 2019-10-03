@@ -12,7 +12,7 @@ result_folder = "conv_features/"
 def main():
     model = tf.keras.models.load_model(model_path+"model.h5")
     model = model.layers[0] # we only care the block of MobileNetV2
-    conv_output = model.get_layer("block_3_project").output
+    conv_output = model.get_layer("Conv1").output
 
     model = tf.keras.Model(inputs=model.input, outputs=conv_output)
 
@@ -21,23 +21,26 @@ def main():
     noise_image = tf.expand_dims(noise_image, 0)
     noise_image = tf.Variable(noise_image)
 
-    optimizer = tf.keras.optimizers.Adam(learning_rate=0.1)
-    iterations = 20
+    iterations = 100
 
-    for _ in range(iterations):
+    for i in range(iterations):
+        print("Iteration: {}".format(i))
+        optimizer = tf.keras.optimizers.Adam(learning_rate=0.1)
         with tf.GradientTape() as t:
             t.watch(noise_image)
-            activation = model(noise_image)
+            activation = model(noise_image)[0, :, :, 10]
             loss = -tf.math.reduce_mean(activation)
 
         grads = t.gradient(loss, noise_image)
-        print(type(grads))
         optimizer.apply_gradients([(grads, noise_image)])
+        noise_image.assign(tf.clip_by_value(noise_image, 0.0, 1.0))
 
-    noise_image *= 255
-    noise_image = tf.reshape(noise_image, [96, 96, 3])
+    noise_image = noise_image.read_value()
+    noise_image = tf.squeeze(noise_image, 0)
 
-    cv2.imshow("image", np.array([noise_image]))
+    image = np.array(noise_image)
+    image = cv2.resize(image, (400, 400))
+    cv2.imshow("image", image)
     cv2.waitKey(0)
 
 
