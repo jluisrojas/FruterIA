@@ -1,3 +1,5 @@
+import os
+from os import path
 import tensorflow as tf
 import numpy as np
 import cv2
@@ -5,18 +7,23 @@ import matplotlib
 from matplotlib import pyplot as plt
 import matplotlib.image as mpimg
 
-image_path = "datasets/Fruits360/test/Apple Golden 1/3_100.jpg"
-model_path = "trained_models/f360_MobileNetV2_04/model.h5"
+image_path = "datasets/Fruits360/test/orange/86_100.jpg"
+model_path = "trained_models/f360_MobileNetV2_04/"
+result_folder = "net_activations_orange/"
 
 def main():
     print("[INFO] Ploting images activation")
+
+    if not path.exists(model_path+result_folder):
+        os.makedirs(model_path+result_folder)
+
     image = cv2.imread(image_path)
     image_tensor = tf.convert_to_tensor(image)
     image_tensor = tf.image.resize(image_tensor, [96, 96])
-    image_tensor = tf.expand_dims(image_tensor, 0)
+    image_tensor = tf.expand_dims(image_tensor, 0) / 255
 
     print("[INFO] Loading model...")
-    model = tf.keras.models.load_model(model_path)
+    model = tf.keras.models.load_model(model_path+"model.h5")
     mnetBlock = model.layers[0]
 
     layers_output = [layer.output for layer in mnetBlock.layers]
@@ -25,18 +32,17 @@ def main():
     activations = activationModel.predict(image_tensor)
 
     layer_names = []
-    for layer in mnetBlock.layers[:5]:
+    for layer in mnetBlock.layers[:]:
         layer_names.append(layer.name) # Names of the layers, so you can have them as part of your plot
         
     images_per_row = 16
+    count = 0
 
     for layer_name, layer_activation in zip(layer_names, activations[:]): # Displays the feature maps
         n_features = layer_activation.shape[-1] # Number of features in the feature map
-        print(n_features)
         size = layer_activation.shape[1] #The feature map has shape (1, size, size, n_features).
-        print(size)
         n_cols = n_features // images_per_row # Tiles the activation channels in this matrix
-        print("n_cols: {}".format(n_cols))
+
         if n_cols != 0:
             display_grid = np.zeros((size * n_cols, images_per_row * size))
             for col in range(n_cols): # Tiles each filter into a big horizontal grid
@@ -56,7 +62,8 @@ def main():
                                 scale * display_grid.shape[0]))
             plt.title(layer_name)
             plt.grid(False)
-            print(display_grid.shape)
-            plt.imsave(layer_name+".png", display_grid, format="png", cmap='viridis')
+            #print(display_grid.shape)
+            plt.imsave(model_path+result_folder+str(count)+"_"+layer_name+".png", display_grid, format="png", cmap='viridis')
+            count += 1
 
 main()
