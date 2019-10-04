@@ -7,9 +7,9 @@ import matplotlib
 from matplotlib import pyplot as plt
 import matplotlib.image as mpimg
 
-image_path = "datasets/Fruits360/test/orange/86_100.jpg"
+image_path = "datasets/Fruits360/test/Banana/86_100.jpg"
 model_path = "trained_models/f360_MobileNetV2_04/"
-result_folder = "net_activations_orange/"
+result_folder = "net_activations_banana/"
 
 def main():
     print("[INFO] Ploting images activation")
@@ -65,5 +65,7 @@ def main():
             #print(display_grid.shape)
             plt.imsave(model_path+result_folder+str(count)+"_"+layer_name+".png", display_grid, format="png", cmap='viridis')
             count += 1
+
+    print("Finished")
 
 main()

@@ -10,9 +10,12 @@ model_path = "trained_models/f360_MobileNetV2_04/"
 result_folder = "conv_features/"
 
 def main():
+    if not path.exists(model_path+result_folder):
+        os.makedirs(model_path+result_folder)
+
     model = tf.keras.models.load_model(model_path+"model.h5")
     model = model.layers[0] # we only care the block of MobileNetV2
-    conv_output = model.get_layer("Conv1").output
+    conv_output = model.get_layer("block_15_project").output
 
     model = tf.keras.Model(inputs=model.input, outputs=conv_output)
 
@@ -21,7 +24,7 @@ def main():
     noise_image = tf.expand_dims(noise_image, 0)
     noise_image = tf.Variable(noise_image)
 
-    iterations = 100
+    iterations = 10
 
     for i in range(iterations):
         print("Iteration: {}".format(i))
@@ -42,6 +45,7 @@ def main():
     image = cv2.resize(image, (400, 400))
     cv2.imshow("image", image)
     cv2.waitKey(0)
+    cv2.imwrite(model_path+result_folder+"filter.jpg", image)
 
 
 main()
