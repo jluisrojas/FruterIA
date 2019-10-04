@@ -27,7 +27,7 @@ def main():
     iterations = 10
 
     for i in range(iterations):
-        print("Iteration: {}".format(i))
+        print("Iteration: {}".format(i+1))
         optimizer = tf.keras.optimizers.Adam(learning_rate=0.1)
         with tf.GradientTape() as t:
             t.watch(noise_image)
