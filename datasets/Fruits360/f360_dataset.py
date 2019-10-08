@@ -165,7 +165,7 @@ def f360_create_dataset(training_path=None, test_path=None, num_imgs=-1,
                 encode_image_info(image, cat, train_writer)
                 train_size += 1
                 #i += random.randint(10, 20)
-                i += 1
+                i += 30
 
             # escribe test images
             for j in range(n_test):
