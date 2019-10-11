@@ -22,7 +22,12 @@ def main():
     model = tf.keras.models.load_model(path_to_model+"model.h5")
     _ = input("[INFO] Click to continue")
     #model = tf.keras.models.load_model(path_to_model+"checkpoints/model_checkpoint_5.h5")
-    img_paths = glob.glob(path_to_imgs + "*")
+    img_folders = glob.glob(path_to_imgs + "*")
+    img_paths = []
+    for folder in img_folders:
+        for i in glob.glob(folder + "/*"):
+            img_paths.append(i)
+
     img_paths = sorted(img_paths)
     print(img_paths)
     

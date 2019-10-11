@@ -78,7 +78,7 @@ def f360_load_dataset(path=None, resize=None, num_classes=None):
 #   num_imgs: numero de images a obtener, -1 para todas
 #   result_path: el path donde se guarda el resultado
 def f360_create_dataset(training_path=None, test_path=None, num_imgs=-1,
-        result_path=None):
+        result_path=None, delta=1, offset=0):
     # Crea la carpeta por si no existe donde se va a guardar el resultado
     if not path.exists(result_path):
         os.makedirs(result_path)
@@ -149,8 +149,9 @@ def f360_create_dataset(training_path=None, test_path=None, num_imgs=-1,
                 n_test = len(test_img_path)
 
 
-            i = 0
+            i = offset
             j = 0
+            total = 0
             # escribe training images
             """
             for i in range(n_train):
@@ -159,13 +160,15 @@ def f360_create_dataset(training_path=None, test_path=None, num_imgs=-1,
                 encode_image_info(image, cat, train_writer)
                 train_size += 1
             """
-            while i < n_train:
+            while total < n_train:
                 img_path = train_img_path[i]
                 image = cv2.imread(img_path)
                 encode_image_info(image, cat, train_writer)
                 train_size += 1
                 #i += random.randint(10, 20)
-                i += 30
+                i += delta
+                if i >= n_train: i = i - n_train
+                total += delta
 
             # escribe test images
             for j in range(n_test):
@@ -185,6 +188,8 @@ def f360_create_dataset(training_path=None, test_path=None, num_imgs=-1,
     dataset_info = {
         "name": "Fruits 360 dataset",
         "num_classes": len(process_cats),
+        "delta": delta,
+        "offset": offset,
         "categories": process_cats,
         "train_size": total_train_size,
         "test_size": total_test_size,

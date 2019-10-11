@@ -10,6 +10,6 @@ def main():
     print("[INFO] Creating Fruits 360 Dataset")
     # Crea el dataset
     f360_create_dataset(training_path=training_path, test_path=test_path,
-        result_path=result_path)
+        result_path=result_path, delta=85, offset=0)
 
 main()

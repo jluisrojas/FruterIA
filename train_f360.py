@@ -31,14 +31,13 @@ def f360_train_setup():
         "info": """Entrenando Fruits 360 dataset con MobileNetV2 con weights de imagnet y RMSprop, 
         input shape de [96, 96, 3], se esta entrenando el modelo completo. El
         dataset es un subdataset del dataset completo""",
-
-        "path": "trained_models/f360_MobileNetV2_d08/",
-        "dataset_path": "datasets/Fruits360/F360-3-74/",
+        "path": "trained_models/f360_MobileNetV2_d15/",
+        "dataset_path": "datasets/Fruits360/F360-3-18-O0/",
         "num_classes": 0,
         "classes": [],
         "input_shape": (96, 96, 3),
-        "epochs": 300,
-        "batch_size": 1,
+        "epochs": 400,
+        "batch_size": 6,
         "loss": "categorical_crossentropy",
         "metrics": ["accuracy"],
         "learning_rate": 0.0001,

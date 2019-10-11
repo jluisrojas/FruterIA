@@ -7,9 +7,10 @@ import matplotlib
 from matplotlib import pyplot as plt
 import matplotlib.image as mpimg
 
-image_path = "datasets/Fruits360/test/Banana/86_100.jpg"
+#image_path = "datasets/Fruits360/test/Banana/86_100.jpg"
+image_path = "datasets/test-f360-coco-crop/Orange/000000087620.jpg"
 model_path = "trained_models/f360_MobileNetV2_04/"
-result_folder = "net_activations_banana/"
+result_folder = "bad_net_activations_orange/"
 
 def main():
     print("[INFO] Ploting images activation")
