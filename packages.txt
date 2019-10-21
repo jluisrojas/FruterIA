@@ -4,6 +4,7 @@ numpy
 matplotlib
 pandas
 seaborn
+fire
 OpenCV2
 pydot
 pydotplus <- via conda
