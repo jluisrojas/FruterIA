@@ -6,6 +6,13 @@ import sys
 from glob import glob
 import fire
 
+# Function that loads the AOB dataset from a tfrecord
+# Args:
+#   path: path to the folder that contains the tfrecord's
+# Returns:
+#   train_data: Tf Dataset API object, with the training data
+#   test_data: Tf Dataset API object, with the test data
+#   info: dictionary containing information about the data set
 def load_dataset(path=""):
     train_path = path+"aob_train.tfrecord"
     test_path = path+"aob_test.tfrecord"
@@ -34,6 +41,7 @@ def load_dataset(path=""):
     train_data = train_raw_data.map(_parse_example)
     test_data = test_raw_data.map(_parse_example)
 
+    # Sets the images shape (extrange things of tensorflow)
     def _set_dataset_shape(x, y):
         x.set_shape([224, 224, 3])
 
@@ -48,7 +56,12 @@ def load_dataset(path=""):
 
     return train_data, test_data, info
 
-def encode_image(image, category, writer):
+# Function that encodes information, and writes it to the TFRecord Writer
+# Args:
+#   image: numpy array with the image
+#   category: tensor with the onehot encoding
+#   writer: object of type TFRecordWriter
+def _encode_image(image, category, writer):
     image_tensor = tf.convert_to_tensor(image)
     image_tensor /= 255
     data = {
@@ -59,6 +72,12 @@ def encode_image(image, category, writer):
     example = tf.train.Example(features=tf.train.Features(feature=data))
     writer.write(example.SerializeToString())
 
+# Creates a template (dict) for the dataset information
+# Args
+#   domains: list of domains in the dataset
+#   categories: list with the categories of the dataset
+# Returns:
+#   info: dictionary to store the information
 def info_template(domains, categories):
     info = {"about": "Apple Orange Banana Dataset"}
     info["categories"] = categories
@@ -74,6 +93,11 @@ def info_template(domains, categories):
 
     return info
 
+# Creates TFRecords of the AOB dataset, in order to use it with the
+# tensorflow Dataset API
+# Args:
+#   path: path of the result folder to store the tfrecords
+#   include_bag: True if you want to include the photos with bag
 def create_dataset(path="AOB_TF", include_bag=True):
     domains = ["train", "test"]
     categories = ["apple", "orange", "banana"]
@@ -115,5 +139,6 @@ def bytes_feature(value):
         value = value.numpy()
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
 
+# If it is executing as main, create the dataset
 if __name__ == "__main__":
     fire.Fire(create_dataset)

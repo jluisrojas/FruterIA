@@ -9,7 +9,7 @@ import numpy as np
 def main():
     #path_to_model = "trained_models/f360_vgg_01/"
     path_to_model = "trained_models/f360_MobileNetV2_04/"
-    path_to_imgs = "datasets/test-f360-coco-crop/"
+    path_to_imgs = "datasets/test-report/"
 
     with open(path_to_model+"setup.json", "r") as data:
         setup = json.load(data)
@@ -28,8 +28,11 @@ def main():
         for i in glob.glob(folder + "/*"):
             img_paths.append(i)
 
+    img_paths = glob.glob(path_to_imgs+"*")
     img_paths = sorted(img_paths)
     print(img_paths)
+
+    i = 0
     
     for img_path in img_paths:
         image = cv2.imread(img_path)
@@ -50,9 +53,12 @@ def main():
         cat = classes[index]
         print(cat)
 
-        cv2.putText(original_image, cat , (10, 25),  cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+        cv2.putText(original_image, cat , (10, 45),  cv2.FONT_HERSHEY_SIMPLEX,
+                1.8, (0, 255, 0), 4)
         cv2.imshow("Test images", original_image)
         cv2.waitKey(0)
+        cv2.imwrite(path_to_imgs+"res_{}.png".format(i), original_image)
+        i += 1
 
 
 main()
