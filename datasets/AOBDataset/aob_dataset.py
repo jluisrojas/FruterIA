@@ -124,7 +124,7 @@ def create_dataset(path="AOB_TF", include_bag=True):
 
                 for img in img_paths:
                     image = cv2.imread(img)
-                    encode_image(image, c_onehot, writer)
+                    _encode_image(image, c_onehot, writer)
 
                 info[domain+"_size"] += len(img_paths)
                 info[category][domain+"_size"] += len(img_paths)

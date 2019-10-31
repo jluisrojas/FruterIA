@@ -24,19 +24,19 @@ from training_utils.training import continue_training
 from training_utils.training import train_model
 
 def main():
-    train_f360()
+    train_AOB()
 
-def f360_train_setup():
+def AOB_train_setup():
     setup = {
-        "info": """Entrenando AOB dataset con MobileNetV2 con weights de imagnet y RMSprop, 
+        "info": """Entrenando AOB dataset sin bolsa con MobileNetV2 con weights de imagnet y RMSprop, 
         input shape de [224, 224, 3], se esta entrenando el modelo completo""",
-        "path": "trained_models/AOB_MobileNetV2_01/",
-        "dataset_path": "datasets/AOBDataset/AOB_TF/",
+        "path": "trained_models/AOB_MobileNetV2_04/",
+        "dataset_path": "datasets/AOBDataset/AOB_TF_NB/",
         "num_classes": 3,
         "classes": [],
         "input_shape": (224, 224, 3),
         "epochs": 20,
-        "batch_size": 60,
+        "batch_size": 20,
         "loss": "categorical_crossentropy",
         "metrics": ["accuracy"],
         "learning_rate": 0.0001,
@@ -46,8 +46,8 @@ def f360_train_setup():
 
     return setup
 
-def train_f360():
-    setup = f360_train_setup()
+def train_AOB():
+    setup = AOB_train_setup()
     tf.random.set_seed(setup["seed"])
     np.random.seed(setup["seed"])
 
