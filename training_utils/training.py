@@ -84,8 +84,8 @@ def train_model(setup, model, dataset):
             show_shapes=True, show_layer_names=True, expand_nested=False)
 
     # Crea optimizador, por defecto Adam
-    #opt = Adam(lr=setup["learning_rate"])
-    opt = RMSprop(lr=setup["learning_rate"])
+    opt = Adam(lr=setup["learning_rate"])
+    #opt = RMSprop(lr=setup["learning_rate"])
 
     # Compila el modelo
     model.compile(loss=setup["loss"], optimizer=opt, metrics=setup["metrics"])
@@ -121,7 +121,7 @@ def fit_model(compiled_model=None, # El modelo debe de estar complicado
     if initial_epoch >= 1:
         relative = initial_epoch
     callbacks = [
-        TrainingCheckPoints(path+"checkpoints/", relative_epoch=relative),
+        #TrainingCheckPoints(path+"checkpoints/", relative_epoch=relative),
         CSVLogger(path+"training_log.csv", append=continue_train),
         TensorBoard(log_dir=path+"logs")
     ]
