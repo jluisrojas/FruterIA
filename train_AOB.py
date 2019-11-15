@@ -12,6 +12,7 @@ import numpy as np
 from datasets.Fruits360.f360_dataset import f360_load_dataset
 from datasets.mnist.mnist_dataset import load_mnist_dataset_resize, load_mnist_dataset
 from datasets.AOBDataset.aob_dataset import load_dataset
+from datasets.data_aug import *
 
 # Importa modelos
 from models.mobilenetv2 import MobileNetV2
@@ -28,15 +29,15 @@ def main():
 
 def AOB_train_setup():
     setup = {
-        "info": """Entrenando AOB dataset sin bolsa con MobileNetV2 con weights de imagnet y RMSprop, 
-        input shape de [224, 224, 3], se esta entrenando el modelo completo""",
-        "path": "trained_models/AOB_MobileNetV2_04/",
-        "dataset_path": "datasets/AOBDataset/AOB_TF_NB/",
+        "info": """Entrenando AOB dataset con bolsa y data augmentation con MobileNetV2 con weights 
+        de imagnet y Adam, input shape de [224, 224, 3], se esta entrenando el modelo completo""",
+        "path": "trained_models/AOB_MobileNetV2_12/",
+        "dataset_path": "datasets/AOBDataset/AOB_BAG_COLOR/",
         "num_classes": 3,
         "classes": [],
         "input_shape": (224, 224, 3),
-        "epochs": 20,
-        "batch_size": 20,
+        "epochs": 80,
+        "batch_size": 30,
         "loss": "categorical_crossentropy",
         "metrics": ["accuracy"],
         "learning_rate": 0.0001,
@@ -53,7 +54,24 @@ def train_AOB():
 
     w, h, _ = setup["input_shape"]
 
-    train, test, info = load_dataset(path=setup["dataset_path"]) 
+    train, test, info = load_dataset(path=setup["dataset_path"], color_data=True) 
+
+    for x, c, y in train.take(1):
+        print(x)
+        print(c)
+        print(y)
+
+    def _join_inputs(x, c, y):
+        return (x, c), y
+
+    train.map(_join_inputs)
+    test.map(_join_inputs)
+
+    for x, y in train.take(1):
+        print(x)
+        print(y)
+
+    #train.map(color_aug)
 
     train = train.shuffle(int(info["train_size"] / info["num_classes"])).batch(setup["batch_size"])
     test = test.batch(setup["batch_size"])
@@ -62,15 +80,48 @@ def train_AOB():
     setup["classes"] = info["categories"]
     setup["num_classes"] = info["num_classes"]
 
-    #model = SmallerVGGNet.build(input_shape=(100, 100, 3), classes=3)
+    #model = SmallerVGGNet.build(input_shape=(224, 224, 3), classes=3)
     #model = tf.keras.applications.MobileNetV2(include_top=True,
     #        weights="imagenet",classes=3, input_shape=(100, 100, 3))
 
-    model = mnv2_transfer_model(num_classes=setup["num_classes"],
-            input_shape=setup["input_shape"])
+    #model = mnv2_transfer_model(num_classes=setup["num_classes"], input_shape=setup["input_shape"])
     #model = mnv2_finetune_model(num_classes=3, input_shape=(96, 96, 3))
 
+    model = mnv2_transfer_model_multi_input(num_classes=setup["num_classes"], input_shape=setup["input_shape"])
+
     train_model(setup, model, (train, test))
+
+def mnv2_transfer_model_multi_input(num_classes=None, input_shape=None):
+    inputA = tf.keras.Input(shape=input_shape)
+    inputB = tf.keras.Input(shape=(3,))
+    # Obtiene el modelo base que proporciona keras
+    # este no incluye el top, porque es custom
+    base_model = tf.keras.applications.MobileNetV2(include_top=False,
+            weights="imagenet", input_shape=input_shape)
+    base_model.trainable = True
+    global_average_layer = tf.keras.layers.GlobalAveragePooling2D(name="gap")
+
+    x = base_model(inputA)
+    x = global_average_layer(x)
+    #x = tf.keras.Model(inputs=inputA, outputs=x)
+
+    y = tf.keras.layers.Dense(5, activation="relu", name="dense0")(inputB)
+    #y = tf.keras.Model(inputs=inputB, outputs=y)
+
+    combined = tf.keras.layers.Concatenate()([x, y])
+    #combined = tf.keras.layers.concatenate(np.shape([x.outputs, y.outputs]))
+
+    prediction_layer = tf.keras.layers.Dense(num_classes, name="dense")
+    activation_layer = tf.keras.layers.Activation("softmax", name="activation")
+
+    z = prediction_layer(combined)
+    z = activation_layer(z)
+
+    #model = tf.keras.Model(inputs=[x.input, y.input], outputs=z)
+    model = tf.keras.Model(inputs=[inputA, inputB], outputs=z)
+
+    return model
+
 
 def mnv2_transfer_model(num_classes=None, input_shape=None):
     # Obtiene el modelo base que proporciona keras

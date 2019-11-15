@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 import cv2
 import os
 import json
@@ -13,7 +14,7 @@ import fire
 #   train_data: Tf Dataset API object, with the training data
 #   test_data: Tf Dataset API object, with the test data
 #   info: dictionary containing information about the data set
-def load_dataset(path=""):
+def load_dataset(path="", color_data=False):
     train_path = path+"aob_train.tfrecord"
     test_path = path+"aob_test.tfrecord"
 
@@ -25,16 +26,18 @@ def load_dataset(path=""):
         "y": tf.io.FixedLenFeature([], tf.string)
     }
 
+    if color_data:
+        _format["color"] = tf.io.FixedLenFeature([], tf.string)
+
     def _parse_example(example):
         ex = tf.io.parse_single_example(example, _format)
         x = tf.io.parse_tensor(ex["x"], tf.float32)
         y = tf.io.parse_tensor(ex["y"], tf.float32)
         y = tf.reshape(y, [-1])
 
-        data_dict = {
-            "x": x,
-            "y": y
-        }
+        if color_data:
+            c = tf.io.parse_tensor(ex["color"], tf.float32)
+            return x, c, y
 
         return x, y
 
@@ -44,15 +47,21 @@ def load_dataset(path=""):
     # Sets the images shape (extrange things of tensorflow)
     def _set_dataset_shape(x, y):
         x.set_shape([224, 224, 3])
-
         return x, y
+    def _set_dataset_shape_c(x, c, y):
+        x.set_shape([224, 224, 3])
+        return x, c, y
 
-    train_data = train_data.map(_set_dataset_shape)
-    test_data = test_data.map(_set_dataset_shape)
+    if color_data:
+        train_data = train_data.map(_set_dataset_shape_c)
+        test_data = test_data.map(_set_dataset_shape_c)
+    else:
+        train_data = train_data.map(_set_dataset_shape)
+        test_data = test_data.map(_set_dataset_shape)
+
 
     with open(path+"dataset_info.json", "r") as data:
         info = json.load(data)
-
 
     return train_data, test_data, info
 
@@ -61,13 +70,17 @@ def load_dataset(path=""):
 #   image: numpy array with the image
 #   category: tensor with the onehot encoding
 #   writer: object of type TFRecordWriter
-def _encode_image(image, category, writer):
+def _encode_image(image, category, writer, include_color, color):
     image_tensor = tf.convert_to_tensor(image)
     image_tensor /= 255
     data = {
         "x": bytes_feature(tf.io.serialize_tensor(image_tensor)),
         "y": bytes_feature(tf.io.serialize_tensor(category))
     }
+
+    if include_color:
+        color /= 255
+        data["color"] = bytes_feature(tf.io.serialize_tensor(color))
 
     example = tf.train.Example(features=tf.train.Features(feature=data))
     writer.write(example.SerializeToString())
@@ -98,7 +111,7 @@ def info_template(domains, categories):
 # Args:
 #   path: path of the result folder to store the tfrecords
 #   include_bag: True if you want to include the photos with bag
-def create_dataset(path="AOB_TF", include_bag=True):
+def create_dataset(path="AOB_TF", include_bag=True, include_color=True):
     domains = ["train", "test"]
     categories = ["apple", "orange", "banana"]
     types = ["noBag"]
@@ -116,6 +129,21 @@ def create_dataset(path="AOB_TF", include_bag=True):
     for domain in domains:
         writer = tf.io.TFRecordWriter(path+"/aob_"+domain+".tfrecord")
         for category in categories:
+            color = None
+            if include_color:
+                color = np.zeros((3, 1))
+                if category == "apple":
+                    color[0] = 255
+                    color[1] = 255
+                if category == "banana":
+                    color[0] = 255
+                    color[1] = 255
+                if category == "orange":
+                    color[0] = 255
+                    color[1] = 165
+
+                color = tf.convert_to_tensor(color)
+
             c_onehot = tf.one_hot([onehot_dict[category]], len(categories))
 
             for typ in types:
@@ -124,7 +152,7 @@ def create_dataset(path="AOB_TF", include_bag=True):
 
                 for img in img_paths:
                     image = cv2.imread(img)
-                    _encode_image(image, c_onehot, writer)
+                    _encode_image(image, c_onehot, writer, include_color, color)
 
                 info[domain+"_size"] += len(img_paths)
                 info[category][domain+"_size"] += len(img_paths)
