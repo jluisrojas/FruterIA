@@ -34,16 +34,15 @@ def main():
         prediction = model.predict(frame_tensor)
         prediction *= 100.0
         prediction = tf.cast(prediction, tf.int8)
-        print(prediction)
+        #print(prediction)
         index = tf.math.argmax(prediction, axis=1)
         index = tf.keras.backend.get_value(index)[0]
 
         cat = classes[index]
-        print(cat)
+        #print(cat)
 
-
-        cv2.putText(crop_frame, cat , (10, 45),  cv2.FONT_HERSHEY_SIMPLEX,
-                1.8, (0, 255, 0), 4)
+        if cat != "orange":
+            cv2.putText(crop_frame, cat , (10, 45),  cv2.FONT_HERSHEY_SIMPLEX, 1.8, (0, 255, 0), 4)
 
         cv2.imshow("test", crop_frame)
         k = cv2.waitKey(1)
