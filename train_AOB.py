@@ -31,12 +31,12 @@ def AOB_train_setup():
     setup = {
         "info": """Entrenando AOB dataset con bolsa y data augmentation con MobileNetV2 con weights 
         de imagnet y Adam, input shape de [224, 224, 3], se esta entrenando el modelo completo""",
-        "path": "trained_models/AOB_MobileNetV2_12/",
+        "path": "trained_models/AOB_MobileNetV2_13/",
         "dataset_path": "datasets/AOBDataset/AOB_BAG_COLOR/",
         "num_classes": 3,
         "classes": [],
         "input_shape": (224, 224, 3),
-        "epochs": 80,
+        "epochs": 40,
         "batch_size": 30,
         "loss": "categorical_crossentropy",
         "metrics": ["accuracy"],
@@ -56,22 +56,13 @@ def train_AOB():
 
     train, test, info = load_dataset(path=setup["dataset_path"], color_data=True) 
 
-    for x, c, y in train.take(1):
-        print(x)
-        print(c)
-        print(y)
-
     def _join_inputs(x, c, y):
         return (x, c), y
 
-    train.map(_join_inputs)
-    test.map(_join_inputs)
+    train = train.map(_join_inputs)
+    test = test.map(_join_inputs)
 
-    for x, y in train.take(1):
-        print(x)
-        print(y)
-
-    #train.map(color_aug)
+    #train = train.map(color_aug)
 
     train = train.shuffle(int(info["train_size"] / info["num_classes"])).batch(setup["batch_size"])
     test = test.batch(setup["batch_size"])
@@ -105,7 +96,7 @@ def mnv2_transfer_model_multi_input(num_classes=None, input_shape=None):
     x = global_average_layer(x)
     #x = tf.keras.Model(inputs=inputA, outputs=x)
 
-    y = tf.keras.layers.Dense(5, activation="relu", name="dense0")(inputB)
+    y = tf.keras.layers.Dense(100, activation="relu", name="dense0")(inputB)
     #y = tf.keras.Model(inputs=inputB, outputs=y)
 
     combined = tf.keras.layers.Concatenate()([x, y])

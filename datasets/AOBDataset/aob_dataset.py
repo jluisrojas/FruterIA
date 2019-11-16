@@ -36,7 +36,8 @@ def load_dataset(path="", color_data=False):
         y = tf.reshape(y, [-1])
 
         if color_data:
-            c = tf.io.parse_tensor(ex["color"], tf.float32)
+            c = tf.io.parse_tensor(ex["color"], tf.float64)
+            c = tf.reshape(c, [3])
             return x, c, y
 
         return x, y
