@@ -1,0 +1,25 @@
+{
+    "name": "Fruits 360 dataset",
+    "num_classes": 3,
+    "categories": [
+        "Apple Golden 1",
+        "Banana",
+        "Orange"
+    ],
+    "train_size": 488,
+    "test_size": 490,
+    "categories_size": {
+        "Apple Golden 1": [
+            164,
+            164
+        ],
+        "Banana": [
+            164,
+            166
+        ],
+        "Orange": [
+            160,
+            160
+        ]
+    }
+}

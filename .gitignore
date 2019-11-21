@@ -4,14 +4,13 @@
 *.tfrecord
 
 # Ignorar ciertas carpetas de datasets
-datasets/101_ObjectCategories/
-datasets/coco/cocofruits/
-datasets/coco/cocofruits.tfrecord
-datasets/Fruits360/test/
-datasets/Fruits360/test-multiple-fruits/
-datasets/Fruits360/training/
-datasets/Fruits360/F360-3-Custom/test/
-datasets/Fruits360/F360-3-Custom/training/
-trained_models/
-trained_models_FINAL/
-.ipynb_checkpoints/
+src/datasets/101_ObjectCategories/
+src/datasets/coco/cocofruits/
+src/datasets/coco/cocofruits.tfrecord
+src/datasets/Fruits360/test/
+src/datasets/Fruits360/test-multiple-fruits/
+src/datasets/Fruits360/training/
+src/datasets/Fruits360/F360-3-Custom/test/
+src/datasets/Fruits360/F360-3-Custom/training/
+src/trained_models/
+src/trained_models_FINAL/
