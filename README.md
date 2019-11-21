@@ -35,3 +35,5 @@ We use the keras implementation of MobileNetV2 architecture and use transfer lea
 ## 🍑 Dataset
 
 For this investigation a dataset was created, contains images of apples, oranges and bananas. The images contain from one fruit to 3 frutis of the same type, and there is also photos inside of a platic bag, in total the dataset consits of 725 images for training and 342 for testing. Also there are scripts for transforming the dataset to a TFRecord to use with the Tensorflow Dataset API.
+
+![alt text](https://github.com/JoseLuisRojasAranda/FruterIA/blob/master/assets/dataset.png)
