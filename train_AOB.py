@@ -29,18 +29,18 @@ def main():
 
 def AOB_train_setup():
     setup = {
-        "info": """Entrenando AOB dataset con bolsa y data augmentation con MobileNetV2 con weights 
-        de imagnet y Adam, input shape de [224, 224, 3], se esta entrenando el modelo completo""",
-        "path": "trained_models/AOB_MobileNetV2_13/",
-        "dataset_path": "datasets/AOBDataset/AOB_BAG_COLOR/",
+        "info": """Entrenando AOB dataset con bolsa, Entrenado en SmallerVGGNet con weights 
+        inicializado aleatoriamente y Adam optimzier, input shape de [224, 224, 3]""",
+        "path": "trained_models_FINAL/AOB_SVGG_02/",
+        "dataset_path": "datasets/AOBDataset/AOB_TF_NB/",
         "num_classes": 3,
         "classes": [],
         "input_shape": (224, 224, 3),
-        "epochs": 40,
+        "epochs": 50,
         "batch_size": 30,
         "loss": "categorical_crossentropy",
         "metrics": ["accuracy"],
-        "learning_rate": 0.0001,
+        "learning_rate": 3e-4,
         "seed": 123321,
         "dataset_info": " "
     }
@@ -54,13 +54,13 @@ def train_AOB():
 
     w, h, _ = setup["input_shape"]
 
-    train, test, info = load_dataset(path=setup["dataset_path"], color_data=True) 
+    train, test, info = load_dataset(path=setup["dataset_path"]) #, color_data=True) 
 
     def _join_inputs(x, c, y):
         return (x, c), y
 
-    train = train.map(_join_inputs)
-    test = test.map(_join_inputs)
+    #train = train.map(_join_inputs)
+    #test = test.map(_join_inputs)
 
     #train = train.map(color_aug)
 
@@ -71,14 +71,14 @@ def train_AOB():
     setup["classes"] = info["categories"]
     setup["num_classes"] = info["num_classes"]
 
-    #model = SmallerVGGNet.build(input_shape=(224, 224, 3), classes=3)
+    model = SmallerVGGNet.build(input_shape=(224, 224, 3), classes=3)
     #model = tf.keras.applications.MobileNetV2(include_top=True,
     #        weights="imagenet",classes=3, input_shape=(100, 100, 3))
 
     #model = mnv2_transfer_model(num_classes=setup["num_classes"], input_shape=setup["input_shape"])
     #model = mnv2_finetune_model(num_classes=3, input_shape=(96, 96, 3))
 
-    model = mnv2_transfer_model_multi_input(num_classes=setup["num_classes"], input_shape=setup["input_shape"])
+    #model = mnv2_transfer_model_multi_input(num_classes=setup["num_classes"], input_shape=setup["input_shape"])
 
     train_model(setup, model, (train, test))
 
@@ -118,7 +118,7 @@ def mnv2_transfer_model(num_classes=None, input_shape=None):
     # Obtiene el modelo base que proporciona keras
     # este no incluye el top, porque es custom
     base_model = tf.keras.applications.MobileNetV2(include_top=False,
-            weights="imagenet", input_shape=input_shape)
+            alpha=1.0, weights="imagenet", input_shape=input_shape)
     base_model.trainable = True
 
     # Agrega un classficador al final del modelo

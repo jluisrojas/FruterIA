@@ -13,4 +13,5 @@ datasets/Fruits360/training/
 datasets/Fruits360/F360-3-Custom/test/
 datasets/Fruits360/F360-3-Custom/training/
 trained_models/
+trained_models_FINAL/
 .ipynb_checkpoints/
