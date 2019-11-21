@@ -1,4 +1,4 @@
-# FruterIA 🍎🍌
+# FruterIA 🍎🍊🍌
 
 You can find the final report [here](report/FruterIA-report02.pdf).
 
