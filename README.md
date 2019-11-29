@@ -1,6 +1,6 @@
 # FruterIA 🍎🍊🍌
 
-You can find the final report [here](report/FruterIA-report02.pdf).
+You can find the final report [here](report/Report3.pdf).
 
 ## 🍉 Abstract
 
