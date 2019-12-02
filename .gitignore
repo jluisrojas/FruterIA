@@ -13,4 +13,5 @@ src/datasets/Fruits360/training/
 src/datasets/Fruits360/F360-3-Custom/test/
 src/datasets/Fruits360/F360-3-Custom/training/
 src/trained_models/
+src/trained_models2/
 src/trained_models_FINAL/
