@@ -14,7 +14,7 @@ import fire
 #   train_data: Tf Dataset API object, with the training data
 #   test_data: Tf Dataset API object, with the test data
 #   info: dictionary containing information about the data set
-def load_dataset(path="", color_data=False):
+def load_dataset(path="", color_data=False, color_type="RGB"):
     train_path = path+"aob_train.tfrecord"
     test_path = path+"aob_test.tfrecord"
 
@@ -36,8 +36,11 @@ def load_dataset(path="", color_data=False):
         y = tf.reshape(y, [-1])
 
         if color_data:
-            c = tf.io.parse_tensor(ex["color"], tf.float64)
-            c = tf.reshape(c, [3])
+            c = tf.io.parse_tensor(ex["color"], tf.float32)
+            if color_type == "RGB":
+                c = tf.reshape(c, [3])
+            elif color_type == "HIST":
+                c = tf.reshape(c, [765])
             return x, c, y
 
         return x, y
@@ -80,7 +83,7 @@ def _encode_image(image, category, writer, include_color, color):
     }
 
     if include_color:
-        color /= 255
+        tf.cast(color, dtype=tf.float32)
         data["color"] = bytes_feature(tf.io.serialize_tensor(color))
 
     example = tf.train.Example(features=tf.train.Features(feature=data))
@@ -112,13 +115,20 @@ def info_template(domains, categories):
 # Args:
 #   path: path of the result folder to store the tfrecords
 #   include_bag: True if you want to include the photos with bag
-def create_dataset(path="AOB_TF", include_bag=True, include_color=True):
+#   include_color: if add color information to the dataset
+#   color_type: if include color, what type of color to include
+def create_dataset(path="AOB_TF", include_bag=True, include_color=True,
+        color_type="RGB"):
     domains = ["train", "test"]
     categories = ["apple", "orange", "banana"]
     types = ["noBag"]
     if include_bag: types.append("bag")
 
     info = info_template(domains, categories)
+
+    info["include_color"] = include_color
+    if include_color:
+        info["color_type"] = color_type
 
     onehot_dict = { }
     for i in range(len(categories)):
@@ -132,18 +142,21 @@ def create_dataset(path="AOB_TF", include_bag=True, include_color=True):
         for category in categories:
             color = None
             if include_color:
-                color = np.zeros((3, 1))
-                if category == "apple":
-                    color[0] = 255
-                    color[1] = 255
-                if category == "banana":
-                    color[0] = 255
-                    color[1] = 255
-                if category == "orange":
-                    color[0] = 255
-                    color[1] = 165
+                # If color data is of type RGB, hard code the color depending
+                # on the category.
+                if color_type == "RGB":
+                    color = np.zeros((3, 1))
+                    if category == "apple":
+                        color[0] = 255 / 255
+                        color[1] = 255 / 255
+                    if category == "banana":
+                        color[0] = 255 / 255
+                        color[1] = 255 / 255
+                    if category == "orange":
+                        color[0] = 255 / 255
+                        color[1] = 165 / 255
 
-                color = tf.convert_to_tensor(color)
+                    color = tf.convert_to_tensor(color)
 
             c_onehot = tf.one_hot([onehot_dict[category]], len(categories))
 
@@ -153,6 +166,21 @@ def create_dataset(path="AOB_TF", include_bag=True, include_color=True):
 
                 for img in img_paths:
                     image = cv2.imread(img)
+
+                    # if include color and color type, obtain the histogram
+                    # information of the color
+                    if include_color:
+                        if color_type == "HIST":
+                            h_red = cv2.calcHist([image],[2],None,[255],[0,255])
+                            h_green = cv2.calcHist([image],[1],None,[255],[0,255])
+                            h_blue = cv2.calcHist([image],[0],None,[255],[0,255])
+
+                            # Normalizes the histogram
+                            hist = np.concatenate((h_red, h_green, h_blue), 0)
+                            hist /= np.max(hist)
+
+                            color = tf.convert_to_tensor(hist)
+
                     _encode_image(image, c_onehot, writer, include_color, color)
 
                 info[domain+"_size"] += len(img_paths)

@@ -1,0 +1,25 @@
+{
+    "about": "Apple Orange Banana Dataset",
+    "categories": [
+        "apple",
+        "orange",
+        "banana"
+    ],
+    "num_classes": 3,
+    "train_size": 725,
+    "apple": {
+        "train_size": 297,
+        "test_size": 146
+    },
+    "orange": {
+        "train_size": 272,
+        "test_size": 121
+    },
+    "banana": {
+        "train_size": 156,
+        "test_size": 75
+    },
+    "test_size": 342,
+    "include_color": true,
+    "color_type": "HIST"
+}

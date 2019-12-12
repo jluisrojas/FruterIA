@@ -36,25 +36,32 @@ def train_setup():
             first training the last fully connected layer, then using
             fine tunning from the 100th layer. 
             """,
-        "path": "trained_models2/MNV2_ft_06/",
+        "path": "trained_models2/MNV2_ft_14/",
         "include_bag": True,
         "color_data": True,
+        "color_type": "HIST",
         "dataset_path": "datasets/AOBDataset/",
         "num_classes": 3,
         "classes": [],
         "input_shape": (224, 224, 3),
-        "epochs": 20,
+        "epochs": 30,
         "ft_epochs": 20,
         "batch_size": 50,
         "loss": "categorical_crossentropy",
         "metrics": ["accuracy"],
-        "learning_rate": 0.0001,
+        "learning_rates": [
+            0.0001,
+            0.0001 / 10],
+        "fine_tune_at": 100,
         "seed": 123321,
         "dataset_info": " "
     }
 
     if setup["color_data"] == True:
-        setup["dataset_path"] += "AOB_BAG_COLOR/"
+        if setup["color_type"] == "RGB":
+            setup["dataset_path"] += "AOB_BAG_COLOR/"
+        elif setup["color_type"] == "HIST":
+            setup["dataset_path"] += "AOB_BAG_HIST/"
     else:
         if setup["include_bag"] == True:
             setup["dataset_path"] += "AOB_TF/"
@@ -86,7 +93,7 @@ def save_setup(setup):
 def dataset_pipeline(setup):
     # loads the dataset from AOB
     train, test, info = load_dataset(path=setup["dataset_path"],
-            color_data=setup["color_data"])
+            color_data=setup["color_data"], color_type=setup["color_type"])
 
     # adds ifnormation of the dataset to the training setup
     setup["dataset_info"] = info
@@ -95,7 +102,6 @@ def dataset_pipeline(setup):
 
     # Checks if there is color data to extract it
     if setup["color_data"] == True:
-        # DATASER PIPELINE
         def _join_inputs(x, c, y):
             return (x, c), y
 
@@ -112,7 +118,10 @@ def dataset_pipeline(setup):
 # Function that creates the multi input model
 def multi_input_model(setup):
     input_img = tf.keras.Input(shape=setup["input_shape"])
-    input_col = tf.keras.Input(shape=(3,))
+    if setup["color_type"] == "RGB":
+        input_col = tf.keras.Input(shape=(3,))
+    elif setup["color_type"] == "HIST":
+        input_col = tf.keras.Input(shape=(765,))
 
     base_model = tf.keras.applications.MobileNetV2(include_top=False,
             alpha=1.0, weights="imagenet", input_shape=setup["input_shape"])
@@ -120,14 +129,14 @@ def multi_input_model(setup):
 
     # Adds classifer head at the end of the model
     global_average_layer = tf.keras.layers.GlobalAveragePooling2D(name="gap")
-    conv_dense = tf.keras.layers.Dense(10, activation="relu", name="conv_dense")
+    conv_dense = tf.keras.layers.Dense(32, activation="relu", name="conv_dense")
 
     x = base_model(input_img)
     x = global_average_layer(x)
     x = conv_dense(x)
 
     # Numerical data layers
-    num_dense1 = tf.keras.layers.Dense(50, activation="relu", name="color_dense1")
+    num_dense1 = tf.keras.layers.Dense(64, activation="relu", name="color_dense1")
     #num_dense2 = tf.keras.layers.Dense(100, activation="relu", name="color_dense2")
 
     y = num_dense1(input_col)
@@ -204,7 +213,7 @@ def train_model(setup=None, dataset=None):
         show_shapes=True, show_layer_names=True, expand_nested=False)
 
     # Compiles the model
-    opt = RMSprop(lr=setup["learning_rate"])
+    opt = RMSprop(lr=setup["learning_rates"][0])
     model.compile(loss=setup["loss"], optimizer=opt, metrics=setup["metrics"])
 
     # Model callbacks
@@ -221,12 +230,12 @@ def train_model(setup=None, dataset=None):
     # Fine tunning the mode
     base_model.trainable = True
     # Num of layers in the base model: 155
-    fine_tune_at = 100
+    fine_tune_at = setup["fine_tune_at"]
 
     for layer in base_model.layers[:fine_tune_at]:
         layer.trainable = False
 
-    opt = RMSprop(lr=setup["learning_rate"]/10)
+    opt = RMSprop(lr=setup["learning_rates"][1])
     model.compile(loss=setup["loss"], optimizer=opt, metrics=setup["metrics"])
 
     # Model callbacks
@@ -238,7 +247,7 @@ def train_model(setup=None, dataset=None):
     # Trains the model
     print("[INFO] Fine tune phase")
     total_epochs = setup["epochs"] + setup["ft_epochs"]
-    _ = model.fit(train, initial_epoch=setup["epochs"], epochs=total_epochs,  
+    _ = model.fit(train, initial_epoch=setup["epochs"], epochs=total_epochs,
             callbacks=callbacks, validation_data=test)
 
     # Saves model

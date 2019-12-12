@@ -2,6 +2,7 @@
 *.DS_Store
 *.swp
 *.tfrecord
+notebooks/.ipynb_checkpoints/
 
 # Ignorar ciertas carpetas de datasets
 src/datasets/101_ObjectCategories/
