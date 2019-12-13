@@ -36,7 +36,7 @@ def train_setup():
             first training the last fully connected layer, then using
             fine tunning from the 100th layer. 
             """,
-        "path": "trained_models2/MNV2_ft_14/",
+        "path": "trained_models2/MNV2_ft_17/",
         "include_bag": True,
         "color_data": True,
         "color_type": "HIST",
@@ -50,7 +50,7 @@ def train_setup():
         "loss": "categorical_crossentropy",
         "metrics": ["accuracy"],
         "learning_rates": [
-            0.0001,
+            0.001,
             0.0001 / 10],
         "fine_tune_at": 100,
         "seed": 123321,
@@ -129,20 +129,20 @@ def multi_input_model(setup):
 
     # Adds classifer head at the end of the model
     global_average_layer = tf.keras.layers.GlobalAveragePooling2D(name="gap")
-    conv_dense = tf.keras.layers.Dense(32, activation="relu", name="conv_dense")
+    conv_dense = tf.keras.layers.Dense(3, activation="relu", name="conv_dense")
 
     x = base_model(input_img)
     x = global_average_layer(x)
-    x = conv_dense(x)
+    #x = conv_dense(x)
 
     # Numerical data layers
-    num_dense1 = tf.keras.layers.Dense(64, activation="relu", name="color_dense1")
+    num_dense1 = tf.keras.layers.Dense(500, activation="relu", name="color_dense1")
     #num_dense2 = tf.keras.layers.Dense(100, activation="relu", name="color_dense2")
 
-    y = num_dense1(input_col)
+    #y = num_dense1(input_col)
     #y = num_dense2(y)
 
-    combined = tf.keras.layers.Concatenate()([x, y])
+    combined = tf.keras.layers.Concatenate()([x, input_col])
 
     prediction_layer = tf.keras.layers.Dense(setup["num_classes"], name="dense")
     activation_layer = tf.keras.layers.Activation("softmax", name="activation")
