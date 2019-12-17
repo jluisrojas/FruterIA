@@ -2,7 +2,9 @@
 *.DS_Store
 *.swp
 *.tfrecord
-notebooks/.ipynb_checkpoints/
+
+# Ignorar checpoints the jupyter notebooks
+src/notebooks/.ipynb_checkpoints/
 
 # Ignorar ciertas carpetas de datasets
 src/datasets/101_ObjectCategories/

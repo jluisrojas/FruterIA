@@ -36,7 +36,7 @@ def train_setup():
             first training the last fully connected layer, then using
             fine tunning from the 100th layer. 
             """,
-        "path": "trained_models2/MNV2_ft_21/",
+        "path": "trained_models2/MNV2_ft_23/",
         "include_bag": True,
         "color_data": True,
         "color_type": "HIST",
@@ -129,7 +129,7 @@ def multi_input_model(setup):
 
     # Adds classifer head at the end of the model
     global_average_layer = tf.keras.layers.GlobalAveragePooling2D(name="gap")
-    conv_dense = tf.keras.layers.Dense(32, activation="relu", name="conv_dense")
+    conv_dense = tf.keras.layers.Dense(64, activation="relu", name="conv_dense")
 
     x = base_model(input_img)
     x = global_average_layer(x)
@@ -137,10 +137,12 @@ def multi_input_model(setup):
 
     # Numerical data layers
     num_dense1 = tf.keras.layers.Dense(256, activation="relu", name="color_dense1")
-    #num_dense2 = tf.keras.layers.Dense(100, activation="relu", name="color_dense2")
+    num_dense2 = tf.keras.layers.Dense(128, activation="relu", name="color_dense2")
+    num_dense3 = tf.keras.layers.Dense(64, activation="relu", name="color_dense3")
 
     y = num_dense1(input_col)
-    #y = num_dense2(y)
+    y = num_dense2(y)
+    y = num_dense3(y)
 
     combined = tf.keras.layers.Concatenate()([x, y])
 
@@ -170,7 +172,7 @@ def multi_input_model(setup):
 def std_model(setup):
     base_model = tf.keras.applications.MobileNetV2(include_top=False,
             alpha=1.0, weights="imagenet", input_shape=setup["input_shape"])
-    base_model.trainable = False 
+    base_model.trainable = False
 
     # Adds classifer head at the end of the model
     global_average_layer = tf.keras.layers.GlobalAveragePooling2D(name="gap")
