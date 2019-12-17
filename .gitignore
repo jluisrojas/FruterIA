@@ -5,6 +5,7 @@
 
 # Ignorar checpoints the jupyter notebooks
 src/notebooks/.ipynb_checkpoints/
+src/notebooks/.ipynb_checkpoints/tf_kmeans-checkpoint.ipynb
 
 # Ignorar ciertas carpetas de datasets
 src/datasets/101_ObjectCategories/
