@@ -1,0 +1,47 @@
+{
+    "info": "Entrenando AOB dataset con MobileNetV2 con weights de imagnet y RMSprop, \n        input shape de [224, 224, 3], se esta entrenando el modelo completo",
+    "path": "trained_models/AOB_MobileNetV2_02/",
+    "dataset_path": "datasets/AOBDataset/AOB_TF/",
+    "num_classes": 3,
+    "classes": [
+        "apple",
+        "orange",
+        "banana"
+    ],
+    "input_shape": [
+        224,
+        224,
+        3
+    ],
+    "epochs": 20,
+    "batch_size": 30,
+    "loss": "categorical_crossentropy",
+    "metrics": [
+        "accuracy"
+    ],
+    "learning_rate": 0.0001,
+    "seed": 123321,
+    "dataset_info": {
+        "about": "Apple Orange Banana Dataset",
+        "categories": [
+            "apple",
+            "orange",
+            "banana"
+        ],
+        "num_classes": 3,
+        "train_size": 725,
+        "apple": {
+            "train_size": 297,
+            "test_size": 146
+        },
+        "orange": {
+            "train_size": 272,
+            "test_size": 121
+        },
+        "banana": {
+            "train_size": 156,
+            "test_size": 75
+        },
+        "test_size": 342
+    }
+}

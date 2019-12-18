@@ -1,0 +1,55 @@
+{
+    "info": "\n            Training MobileNetV2 with ImageNet weights and RMSprop optimizer.\n            first training the last fully connected layer, then using\n            fine tunning from the 100th layer. \n            ",
+    "path": "trained_models2/MNV2_ft_24/",
+    "include_bag": true,
+    "color_data": true,
+    "color_type": "KMeans",
+    "dataset_path": "datasets/AOBDataset/AOB_TF/",
+    "num_classes": 3,
+    "classes": [
+        "apple",
+        "orange",
+        "banana"
+    ],
+    "input_shape": [
+        224,
+        224,
+        3
+    ],
+    "epochs": 30,
+    "ft_epochs": 20,
+    "batch_size": 25,
+    "loss": "categorical_crossentropy",
+    "metrics": [
+        "accuracy"
+    ],
+    "learning_rates": [
+        0.0001,
+        1e-05
+    ],
+    "fine_tune_at": 100,
+    "seed": 123321,
+    "dataset_info": {
+        "about": "Apple Orange Banana Dataset",
+        "categories": [
+            "apple",
+            "orange",
+            "banana"
+        ],
+        "num_classes": 3,
+        "train_size": 725,
+        "apple": {
+            "train_size": 297,
+            "test_size": 146
+        },
+        "orange": {
+            "train_size": 272,
+            "test_size": 121
+        },
+        "banana": {
+            "train_size": 156,
+            "test_size": 75
+        },
+        "test_size": 342
+    }
+}
