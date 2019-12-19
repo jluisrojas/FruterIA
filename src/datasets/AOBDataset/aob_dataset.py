@@ -26,7 +26,7 @@ def load_dataset(path="", color_data=False, color_type="RGB"):
         "y": tf.io.FixedLenFeature([], tf.string)
     }
 
-    if color_data:
+    if color_data and not color_type=="KMeans":
         _format["color"] = tf.io.FixedLenFeature([], tf.string)
 
     def _parse_example(example):
@@ -35,7 +35,7 @@ def load_dataset(path="", color_data=False, color_type="RGB"):
         y = tf.io.parse_tensor(ex["y"], tf.float32)
         y = tf.reshape(y, [-1])
 
-        if color_data:
+        if color_data and not color_type == "KMeans":
             c = tf.io.parse_tensor(ex["color"], tf.float32)
             if color_type == "RGB":
                 c = tf.reshape(c, [3])
@@ -56,7 +56,7 @@ def load_dataset(path="", color_data=False, color_type="RGB"):
         x.set_shape([224, 224, 3])
         return x, c, y
 
-    if color_data:
+    if color_data and not color_type == "KMeans":
         train_data = train_data.map(_set_dataset_shape_c)
         test_data = test_data.map(_set_dataset_shape_c)
     else:

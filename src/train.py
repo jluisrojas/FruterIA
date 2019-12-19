@@ -1,4 +1,3 @@
-#os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # ERROR
 import os
 import shutil
 from os import path
@@ -14,6 +13,8 @@ from datasets.data_aug import *
 
 # Import model stuff
 from models.mobilenetv2 import MobileNetV2
+from models.custom_layers import ColorExtractor
+from tensorflow.keras.layers import Lambda
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.optimizers import Adam, RMSprop
 from tensorflow.keras.utils import plot_model
@@ -36,10 +37,10 @@ def train_setup():
             first training the last fully connected layer, then using
             fine tunning from the 100th layer. 
             """,
-        "path": "trained_models2/MNV2_ft_23/",
+        "path": "trained_models2/MNV2_ft_28/",
         "include_bag": True,
         "color_data": True,
-        "color_type": "HIST",
+        "color_type": "KMeans",
         "dataset_path": "datasets/AOBDataset/",
         "num_classes": 3,
         "classes": [],
@@ -50,7 +51,7 @@ def train_setup():
         "loss": "categorical_crossentropy",
         "metrics": ["accuracy"],
         "learning_rates": [
-            0.0001,
+            0.0003,
             0.0001 / 10],
         "fine_tune_at": 100,
         "seed": 123321,
@@ -62,6 +63,8 @@ def train_setup():
             setup["dataset_path"] += "AOB_BAG_COLOR/"
         elif setup["color_type"] == "HIST":
             setup["dataset_path"] += "AOB_BAG_HIST/"
+        elif setup["color_type"] == "KMeans":
+            setup["dataset_path"] += "AOB_TF/"
     else:
         if setup["include_bag"] == True:
             setup["dataset_path"] += "AOB_TF/"
@@ -101,7 +104,7 @@ def dataset_pipeline(setup):
     setup["num_classes"] = info["num_classes"]
 
     # Checks if there is color data to extract it
-    if setup["color_data"] == True:
+    if setup["color_data"] == True and not setup["color_type"] == "KMeans":
         def _join_inputs(x, c, y):
             return (x, c), y
 
@@ -114,6 +117,59 @@ def dataset_pipeline(setup):
     test = test.batch(setup["batch_size"])
 
     return train, test
+
+# Function that creates the multi input model
+def k_model(setup):
+    input_img = tf.keras.Input(shape=setup["input_shape"])
+
+    base_model = tf.keras.applications.MobileNetV2(include_top=False,
+            alpha=1.0, weights="imagenet", input_shape=setup["input_shape"])
+    base_model.trainable = False
+
+    # Adds classifer head at the end of the model
+    global_average_layer = tf.keras.layers.GlobalAveragePooling2D(name="gap")
+    conv_dense = tf.keras.layers.Dense(16, activation="relu", name="conv_dense")
+
+    x = base_model(input_img)
+    x = global_average_layer(x)
+    x = conv_dense(x)
+
+    # Color data layers
+    resize_images = Lambda(lambda b: tf.image.resize(b, [100, 100]),
+            name="resize")
+    color_extractor = ColorExtractor(3, 20, trainable=False)
+    num_dense1 = tf.keras.layers.Dense(512, activation="relu", name="color_dense1")
+
+    y = resize_images(input_img)
+    y = color_extractor(y)
+    y = num_dense1(y)
+
+    combined = tf.keras.layers.Concatenate()([x, y])
+
+    prediction_layer = tf.keras.layers.Dense(setup["num_classes"],
+            activation="relu", name="dense")
+    activation_layer = tf.keras.layers.Activation("softmax", name="activation")
+
+    z = prediction_layer(combined)
+    z = activation_layer(z)
+
+    # Creates the new model
+    model = tf.keras.Model(inputs=[input_img], outputs=z)
+
+    # Creates layers dictionaire
+    layers_dict = {
+        "base_cnn": base_model,
+        "global_average": global_average_layer,
+        "conv_dense": conv_dense,
+        "color_extractor": color_extractor,
+        "num_dense1": num_dense1,
+        "concat": combined,
+        "prediction": prediction_layer,
+        "activation": activation_layer }
+
+    return model, layers_dict
+
+
 
 # Function that creates the multi input model
 def multi_input_model(setup):
@@ -190,7 +246,7 @@ def std_model(setup):
     # Creates layer dictionaire
     layers_dict = {
         "base_cnn": base_model,
-        "global_average": golbal_average_layer,
+        "global_average": global_average_layer,
         "prediction": prediction_layer,
         "activation": activation_layer }
 
@@ -204,7 +260,10 @@ def train_model(setup=None, dataset=None):
     train, test = dataset
 
     if setup["color_data"] == True:
-        model, l_dict = multi_input_model(setup)
+        if setup["color_type"] == "KMeans":
+            model, l_dict = k_model(setup)
+        else:
+            model, l_dict = multi_input_model(setup)
     else:
         model, l_dict = std_model(setup)
 
@@ -253,8 +312,10 @@ def train_model(setup=None, dataset=None):
             callbacks=callbacks, validation_data=test)
 
     # Saves model
+    """
     print("[INFO] Serializing model")
     model.save(setup["path"] + "model.h5")
+    """
 
     # Graph model metrics
     print("[INFO] Graphing metrics")
