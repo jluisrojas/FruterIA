@@ -37,7 +37,7 @@ def train_setup():
             first training the last fully connected layer, then using
             fine tunning from the 100th layer. 
             """,
-        "path": "trained_models2/MNV2_ft_28/",
+        "path": "trained_models2/MNV2_ft_29/",
         "include_bag": True,
         "color_data": True,
         "color_type": "KMeans",
@@ -51,7 +51,7 @@ def train_setup():
         "loss": "categorical_crossentropy",
         "metrics": ["accuracy"],
         "learning_rates": [
-            0.0003,
+            0.0006,
             0.0001 / 10],
         "fine_tune_at": 100,
         "seed": 123321,
@@ -137,8 +137,8 @@ def k_model(setup):
     # Color data layers
     resize_images = Lambda(lambda b: tf.image.resize(b, [100, 100]),
             name="resize")
-    color_extractor = ColorExtractor(3, 20, trainable=False)
-    num_dense1 = tf.keras.layers.Dense(512, activation="relu", name="color_dense1")
+    color_extractor = ColorExtractor(3, 10, trainable=False)
+    num_dense1 = tf.keras.layers.Dense(256, activation="relu", name="color_dense1")
 
     y = resize_images(input_img)
     y = color_extractor(y)
