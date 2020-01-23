@@ -16,6 +16,7 @@ The packages needed are the following:
 * pandas
 * seaborn
 * fire
+* keract
 * gopro-python-api
 * pydot
 
