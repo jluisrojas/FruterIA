@@ -54,6 +54,7 @@ def load_dataset(path="", color_data=False, color_type="RGB"):
         return x, y
     def _set_dataset_shape_c(x, c, y):
         x.set_shape([224, 224, 3])
+        #c = tf.cast(c, tf.float32)
         return x, c, y
 
     if color_data and not color_type == "KMeans":
@@ -83,7 +84,7 @@ def _encode_image(image, category, writer, include_color, color):
     }
 
     if include_color:
-        tf.cast(color, dtype=tf.float32)
+        color = tf.cast(color, dtype=tf.float32)
         data["color"] = bytes_feature(tf.io.serialize_tensor(color))
 
     example = tf.train.Example(features=tf.train.Features(feature=data))

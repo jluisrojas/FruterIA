@@ -8,9 +8,9 @@ from matplotlib import pyplot as plt
 import matplotlib.image as mpimg
 
 #image_path = "datasets/Fruits360/test/Banana/86_100.jpg"
-image_path = "datasets/AOBDataset/test/apple/noBag/1-VA-NB-1.JPG"
-model_path = "trained_models/AOB_MobileNetV2_04/"
-result_folder = "activations01/"
+image_path = "datasets/AOBDataset/test/orange/noBag/1-VO-NB-0.JPG"
+model_path = "trained_models/AOB_MobileNetV2_02/"
+result_folder = "activations03/"
 
 def main():
     print("[INFO] Ploting images activation")
@@ -33,13 +33,13 @@ def main():
     activations = activationModel.predict(image_tensor)
 
     layer_names = []
-    for layer in mnetBlock.layers[:]:
+    for layer in mnetBlock.layers[:3]:
         layer_names.append(layer.name) # Names of the layers, so you can have them as part of your plot
-        
+
     images_per_row = 16
     count = 0
 
-    for layer_name, layer_activation in zip(layer_names, activations[:]): # Displays the feature maps
+    for layer_name, layer_activation in zip(layer_names, activations[:3]): # Displays the feature maps
         n_features = layer_activation.shape[-1] # Number of features in the feature map
         size = layer_activation.shape[1] #The feature map has shape (1, size, size, n_features).
         n_cols = n_features // images_per_row # Tiles the activation channels in this matrix
@@ -56,6 +56,8 @@ def main():
                     channel_image *= 64
                     channel_image += 128
                     channel_image = np.clip(channel_image, 0, 255).astype('uint8')
+                    plt.imsave(model_path+result_folder+str(col+row)+".png",
+                            channel_image, format="png", cmap="viridis")
                     display_grid[col * size : (col + 1) * size, # Displays the grid
                                  row * size : (row + 1) * size] = channel_image
             scale = 1. / size

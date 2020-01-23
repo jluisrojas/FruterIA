@@ -37,39 +37,44 @@ def train_setup():
             first training the last fully connected layer, then using
             fine tunning from the 100th layer. 
             """,
-        "path": "trained_models2/MNV2_ft_29/",
+        #"path": "trained_modelsMCPR/KMeans/MNV2_bag/",
+        "path": "trained_modelsMCPR/KMeans/MNV2_bag3/",
         "include_bag": True,
         "color_data": True,
-        "color_type": "KMeans",
+        "color_type": "KMeans", # KMeans, RGB, HIST
         "dataset_path": "datasets/AOBDataset/",
         "num_classes": 3,
         "classes": [],
         "input_shape": (224, 224, 3),
-        "epochs": 30,
+        "epochs": 20,
         "ft_epochs": 20,
         "batch_size": 50,
         "loss": "categorical_crossentropy",
         "metrics": ["accuracy"],
         "learning_rates": [
-            0.0006,
-            0.0001 / 10],
+            0.0001,
+            0.0001/10],
         "fine_tune_at": 100,
         "seed": 123321,
         "dataset_info": " "
     }
 
+    setup["dataset_path"] += "aob"
+
+    if setup["include_bag"] == True:
+        setup["dataset_path"] += "_bag"
+    else:
+        setup["dataset_path"] += "_nobag"
+
     if setup["color_data"] == True:
         if setup["color_type"] == "RGB":
-            setup["dataset_path"] += "AOB_BAG_COLOR/"
+            setup["dataset_path"] += "_RGB/"
         elif setup["color_type"] == "HIST":
-            setup["dataset_path"] += "AOB_BAG_HIST/"
+            setup["dataset_path"] += "_HIST/"
         elif setup["color_type"] == "KMeans":
-            setup["dataset_path"] += "AOB_TF/"
+            setup["dataset_path"] += "_IMG/"
     else:
-        if setup["include_bag"] == True:
-            setup["dataset_path"] += "AOB_TF/"
-        else:
-            setup["dataset_path"] += "AOB_TF_NB/"
+        setup["dataset_path"] += "_IMG/"
 
 
     return setup
@@ -128,7 +133,7 @@ def k_model(setup):
 
     # Adds classifer head at the end of the model
     global_average_layer = tf.keras.layers.GlobalAveragePooling2D(name="gap")
-    conv_dense = tf.keras.layers.Dense(16, activation="relu", name="conv_dense")
+    conv_dense = tf.keras.layers.Dense(32, activation="relu", name="conv_dense")
 
     x = base_model(input_img)
     x = global_average_layer(x)
@@ -137,12 +142,14 @@ def k_model(setup):
     # Color data layers
     resize_images = Lambda(lambda b: tf.image.resize(b, [100, 100]),
             name="resize")
-    color_extractor = ColorExtractor(3, 10, trainable=False)
-    num_dense1 = tf.keras.layers.Dense(256, activation="relu", name="color_dense1")
+    color_extractor = ColorExtractor(3, 20, trainable=False)
+    num_dense1 = tf.keras.layers.Dense(16, activation="relu", name="color_dense1")
+    num_dense2 = tf.keras.layers.Dense(32, activation="relu", name="color_dense1")
 
     y = resize_images(input_img)
     y = color_extractor(y)
     y = num_dense1(y)
+    y = num_dense2(y)
 
     combined = tf.keras.layers.Concatenate()([x, y])
 
@@ -185,6 +192,7 @@ def multi_input_model(setup):
 
     # Adds classifer head at the end of the model
     global_average_layer = tf.keras.layers.GlobalAveragePooling2D(name="gap")
+    #conv_dense = tf.keras.layers.Dense(3, activation="relu", name="conv_dense")
     conv_dense = tf.keras.layers.Dense(64, activation="relu", name="conv_dense")
 
     x = base_model(input_img)
@@ -192,13 +200,14 @@ def multi_input_model(setup):
     x = conv_dense(x)
 
     # Numerical data layers
+    #num_dense1 = tf.keras.layers.Dense(500, activation="relu", name="color_dense1")
     num_dense1 = tf.keras.layers.Dense(256, activation="relu", name="color_dense1")
-    num_dense2 = tf.keras.layers.Dense(128, activation="relu", name="color_dense2")
-    num_dense3 = tf.keras.layers.Dense(64, activation="relu", name="color_dense3")
+    num_dense2 = tf.keras.layers.Dense(64, activation="relu", name="color_dense2")
+    #num_dense3 = tf.keras.layers.Dense(64, activation="relu", name="color_dense3")
 
     y = num_dense1(input_col)
     y = num_dense2(y)
-    y = num_dense3(y)
+    #y = num_dense3(y)
 
     combined = tf.keras.layers.Concatenate()([x, y])
 
