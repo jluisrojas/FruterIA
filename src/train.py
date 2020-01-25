@@ -38,8 +38,8 @@ def train_setup():
             fine tunning from the 100th layer. 
             """,
         #"path": "trained_modelsMCPR/KMeans/MNV2_bag/",
-        "path": "trained_modelsMCPR/KMeans/MNV2_bag3/",
-        "include_bag": True,
+        "path": "trained_modelsMCPR/KMeans/MNV2_bag5/",
+        "include_bag": False,
         "color_data": True,
         "color_type": "KMeans", # KMeans, RGB, HIST
         "dataset_path": "datasets/AOBDataset/",
@@ -133,7 +133,7 @@ def k_model(setup):
 
     # Adds classifer head at the end of the model
     global_average_layer = tf.keras.layers.GlobalAveragePooling2D(name="gap")
-    conv_dense = tf.keras.layers.Dense(32, activation="relu", name="conv_dense")
+    conv_dense = tf.keras.layers.Dense(64, activation="relu", name="conv_dense")
 
     x = base_model(input_img)
     x = global_average_layer(x)
@@ -143,8 +143,8 @@ def k_model(setup):
     resize_images = Lambda(lambda b: tf.image.resize(b, [100, 100]),
             name="resize")
     color_extractor = ColorExtractor(3, 20, trainable=False)
-    num_dense1 = tf.keras.layers.Dense(16, activation="relu", name="color_dense1")
-    num_dense2 = tf.keras.layers.Dense(32, activation="relu", name="color_dense1")
+    num_dense1 = tf.keras.layers.Dense(32, activation="relu", name="color_dense1")
+    num_dense2 = tf.keras.layers.Dense(64, activation="relu", name="color_dense2")
 
     y = resize_images(input_img)
     y = color_extractor(y)
