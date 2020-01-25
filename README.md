@@ -1,10 +1,10 @@
 # FruterIA 🍎🍊🍌
 
-You can find the final report [here](report/Report3.pdf).
+You can find the final report [here](report/MCPR2020_paper.pdf).
 
 ## 🍉 Abstract
 
-The purpose of this investigation is to create a intelligent system for a Fruit Store that makes the checkout process easier. For this we propose using a Convolutional Neural Network, and during training we use techniques like transfer learning, fine tuning and data augmentation in order to make the system robust with a small dataset. To test this we introduce a new dataset of fruits images, and explore what will it take to make the system affordable and scalable. 
+Payment of fruits or vegetables in retail stores normally require them to be manually identified. This paper presents an image clas- sification method, based on lightweight Convolutional Neural Networks (CNN), with the goal of speeding up the checkout process in stores. A new dataset of images is introduced that considers three classes of fruits, inside or without plastic bags. In order to increase the classification accuracy, different input features are added into the CNN architecture. Such inputs are, a single RGB color, the RGB histogram, and the RGB centroid obtained from K-means clustering. The results show an overall 95% classification accuracy for fruits with no plastic bag, and 93% for fruits in a plastic bag.
 
 ## 🍇 Setup
 
